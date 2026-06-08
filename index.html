@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Efficiency Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="navbar-brand">Stock <span>Efficiency</span> 26</div>
+        <div class="nav-links">
+            <a href="#" data-page="overview" class="active">Overview</a>
+            <a href="#" data-page="sku-detail">SKU Detail</a>
+            <a href="#" data-page="suppliers">Suppliers</a>
+            <a href="#" data-page="categories">Categories</a>
+            <a href="#" data-page="new-purchases">New Purchases</a>
+            <a href="#" data-page="locations">Locations</a>
+            <a href="#" data-page="po-assessment">PO Assessment</a>
+            <a href="#" data-page="ordering">Ordering</a>
+            <a href="#" data-page="data-upload" class="nav-upload">Upload Data</a>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+            <div class="file-info" id="file-info">No data loaded</div>
+        </div>
+    </nav>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <div class="filter-group">
+            <span class="filter-label">Status</span>
+            <select id="filter-status">
+                <option value="">All Statuses</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Supplier</span>
+            <select id="filter-supplier">
+                <option value="">All Suppliers</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Category</span>
+            <select id="filter-category">
+                <option value="">All Categories</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Location</span>
+            <select id="filter-location">
+                <option value="">All Locations</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Period</span>
+            <select id="filter-period">
+                <option value="30">Last 30 Days</option>
+                <option value="60">Last 60 Days</option>
+                <option value="90" selected>Last 90 Days</option>
+                <option value="180">Last 180 Days</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Search</span>
+            <input type="text" id="filter-search" placeholder="Search SKU or Name...">
+        </div>
+        <div class="filter-actions">
+            <button class="btn btn-reset" id="btn-reset-filters">Reset</button>
+            <button class="btn btn-export" id="btn-export-csv">CSV</button>
+            <button class="btn btn-export" id="btn-export-xlsx">Excel</button>
+        </div>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+
+        <!-- Overview Page -->
+        <section id="page-overview" class="page active">
+            <div class="po-disclaimer overview-disclaimer">
+                <div class="po-disclaimer-title">SKU Status Definitions</div>
+                <div class="status-defs-grid">
+                    <div class="status-def">
+                        <span class="status-def-label critical">Inactive</span>
+                        <span class="status-def-text">No stock, no sales, no purchases</span>
+                    </div>
+                    <div class="status-def">
+                        <span class="status-def-label critical">Dead Stock</span>
+                        <span class="status-def-text">Has stock but zero sales</span>
+                    </div>
+                    <div class="status-def">
+                        <span class="status-def-label critical">No Sales, Still Purchasing</span>
+                        <span class="status-def-text">Zero sales but recent purchases made</span>
+                    </div>
+                    <div class="status-def">
+                        <span class="status-def-label danger">Stockout</span>
+                        <span class="status-def-text">Zero stock but has sales demand</span>
+                    </div>
+                    <div class="status-def">
+                        <span class="status-def-label warning">Low Stock</span>
+                        <span class="status-def-text">Less than 14 days of stock remaining</span>
+                    </div>
+                    <div class="status-def">
+                        <span class="status-def-label warning">Over-Purchasing</span>
+                        <span class="status-def-text">Purchases exceed 2&times; sales quantity</span>
+                    </div>
+                    <div class="status-def">
+                        <span class="status-def-label warning">Overstocked</span>
+                        <span class="status-def-text">More than 90 days of stock on hand</span>
+                    </div>
+                    <div class="status-def">
+                        <span class="status-def-label info">New / Pipeline</span>
+                        <span class="status-def-text">Recently purchased, awaiting stock, no sales yet</span>
+                    </div>
+                    <div class="status-def">
+                        <span class="status-def-label success">Healthy</span>
+                        <span class="status-def-text">Turnover ratio &gt; 2 (sales exceed 2&times; stock)</span>
+                    </div>
+                    <div class="status-def">
+                        <span class="status-def-label neutral">Adequate</span>
+                        <span class="status-def-text">Default — does not match any other category</span>
+                    </div>
+                </div>
+                <div class="po-disclaimer-note">Avg Daily Sales = Sales Qty &divide; 30 days &nbsp;|&nbsp; Days of Stock = Stock Qty &divide; Avg Daily Sales &nbsp;|&nbsp; Turnover Ratio = Sales Qty &divide; Stock Qty</div>
+            </div>
+
+            <div class="kpi-grid">
+                <div class="kpi-card orange">
+                    <div class="kpi-label">Total SKUs</div>
+                    <div class="kpi-value" id="kpi-total-skus">0</div>
+                </div>
+                <div class="kpi-card blue">
+                    <div class="kpi-label">Total Inventory Value</div>
+                    <div class="kpi-value" id="kpi-total-inventory">0</div>
+                </div>
+                <div class="kpi-card red">
+                    <div class="kpi-label">Dead Stock Value</div>
+                    <div class="kpi-value" id="kpi-dead-stock">0</div>
+                </div>
+                <div class="kpi-card green">
+                    <div class="kpi-label">Healthy SKUs</div>
+                    <div class="kpi-value" id="kpi-healthy-pct">0%</div>
+                </div>
+                <div class="kpi-card red">
+                    <div class="kpi-label">At Risk</div>
+                    <div class="kpi-value" id="kpi-at-risk">0</div>
+                </div>
+                <div class="kpi-card orange">
+                    <div class="kpi-label">Stockouts</div>
+                    <div class="kpi-value" id="kpi-stockout">0</div>
+                </div>
+                <div class="kpi-card yellow">
+                    <div class="kpi-label">Low Stock</div>
+                    <div class="kpi-value" id="kpi-low-stock">0</div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-6">
+                    <div class="card">
+                        <div class="card-title">Status Distribution</div>
+                        <div class="chart-container">
+                            <canvas id="chart-status-dist"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="card">
+                        <div class="card-title">Top 10 Worst Performing SKUs</div>
+                        <div id="tbl-top-worst"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Inventory Value by Status</div>
+                <div id="tbl-status-summary"></div>
+            </div>
+        </section>
+
+        <!-- SKU Detail Page -->
+        <section id="page-sku-detail" class="page">
+            <div class="page-header">
+                <h2>SKU Detail</h2>
+                <div class="sku-count-info" id="sku-count-info">0 SKUs</div>
+            </div>
+            <div class="card">
+                <div id="tbl-sku-detail"></div>
+            </div>
+        </section>
+
+        <!-- Suppliers Page -->
+        <section id="page-suppliers" class="page">
+            <div class="page-header">
+                <h2>Supplier Analysis</h2>
+            </div>
+            <div class="card">
+                <div class="card-title">Supplier Health Scores</div>
+                <div class="chart-container">
+                    <canvas id="chart-supplier-health"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">Supplier Summary</div>
+                <div id="tbl-suppliers"></div>
+            </div>
+        </section>
+
+        <!-- Categories Page -->
+        <section id="page-categories" class="page">
+            <div class="page-header">
+                <h2>Category Analysis</h2>
+            </div>
+            <div class="card">
+                <div class="card-title">Status Distribution by Category</div>
+                <div class="chart-container">
+                    <canvas id="chart-category-stacked"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">Category Summary</div>
+                <div id="tbl-categories"></div>
+            </div>
+        </section>
+
+        <!-- New Purchases Page -->
+        <section id="page-new-purchases" class="page">
+            <div class="page-header">
+                <h2>New Purchases</h2>
+            </div>
+
+            <div class="highlight-cards">
+                <div class="highlight-card lime">
+                    <div class="value" id="new-sku-count">0</div>
+                    <div class="label">Brand New SKUs</div>
+                </div>
+                <div class="highlight-card blue">
+                    <div class="value" id="recent-purchase-count">0</div>
+                    <div class="label">Recently Purchased</div>
+                </div>
+            </div>
+
+            <div class="new-purchase-section">
+                <div class="card-title">Brand New SKUs <span class="count" style="background:var(--lime);color:var(--dark-red)">First-time purchases</span></div>
+                <div id="tbl-new-skus"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Recently Purchased (Last 30 Days)</div>
+                <div id="tbl-recent-purchases"></div>
+            </div>
+        </section>
+
+        <!-- Locations Page -->
+        <section id="page-locations" class="page">
+            <div class="page-header">
+                <h2>Location Analysis</h2>
+            </div>
+            <div class="card">
+                <div class="card-title">Stock Value by Location</div>
+                <div class="chart-container">
+                    <canvas id="chart-location-bar"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">Location Summary</div>
+                <div id="tbl-locations"></div>
+            </div>
+        </section>
+
+        <!-- PO Assessment Page -->
+        <section id="page-po-assessment" class="page">
+            <div class="page-header">
+                <h2>PO Assessment</h2>
+                <div style="display:flex;align-items:center;gap:12px">
+                    <div class="po-file-date" id="po-file-date"></div>
+                    <button class="btn btn-export" id="btn-copy-po">Copy Table</button>
+                    <button class="btn btn-export" id="btn-export-po">Export Excel</button>
+                </div>
+            </div>
+
+            <div class="po-disclaimer">
+                <div class="po-disclaimer-title">Assessment Criteria</div>
+                <div class="po-disclaimer-items">
+                    <span class="po-disclaimer-item approved">Approved — Total stock coverage after PO &le; 45 days</span>
+                    <span class="po-disclaimer-item review">To Be Reviewed — Total coverage &gt; 45 and &le; 60 days</span>
+                    <span class="po-disclaimer-item rejected">Rejected — Total coverage &gt; 60 days or no sales history</span>
+                </div>
+                <div class="po-disclaimer-note">Total coverage = (Current Stock + PO Qty) &divide; Avg Daily Sales</div>
+            </div>
+
+            <div class="po-summary-grid po-3col">
+                <div class="po-summary-card po-approved">
+                    <div class="po-summary-value" id="po-approved-count">0</div>
+                    <div class="po-summary-label">Approved</div>
+                </div>
+                <div class="po-summary-card po-review">
+                    <div class="po-summary-value" id="po-review-count">0</div>
+                    <div class="po-summary-label">To Be Reviewed</div>
+                </div>
+                <div class="po-summary-card po-rejected">
+                    <div class="po-summary-value" id="po-rejected-count">0</div>
+                    <div class="po-summary-label">Rejected</div>
+                </div>
+            </div>
+
+            <div class="po-slicer-bar" id="po-slicer-bar">
+                <span class="po-slicer-label">PO Status</span>
+                <div class="po-slicer-chips" id="po-status-chips"></div>
+            </div>
+
+            <div class="row">
+                <div class="col-4">
+                    <div class="card">
+                        <div class="card-title">Assessment Breakdown</div>
+                        <div class="chart-container" style="height:280px">
+                            <canvas id="chart-po-summary"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-8">
+                    <div class="card">
+                        <div class="card-title">PO Line Details <span class="count" id="po-total-badge">0 SKUs</span></div>
+                        <div id="tbl-po-assessment"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Ordering Page -->
+        <section id="page-ordering" class="page">
+            <div class="page-header">
+                <h2>Order Recommendations</h2>
+                <div style="display:flex;align-items:center;gap:12px">
+                    <button class="btn btn-export" id="btn-export-ordering">Export Excel</button>
+                </div>
+            </div>
+
+            <div class="po-summary-grid po-4col">
+                <div class="po-summary-card ord-total">
+                    <div class="po-summary-value" id="ord-total-skus">0</div>
+                    <div class="po-summary-label">SKUs to Order</div>
+                </div>
+                <div class="po-summary-card ord-value">
+                    <div class="po-summary-value" id="ord-total-value">0</div>
+                    <div class="po-summary-label">Total Order Value</div>
+                </div>
+                <div class="po-summary-card ord-urgent">
+                    <div class="po-summary-value" id="ord-urgent-count">0</div>
+                    <div class="po-summary-label">Urgent</div>
+                </div>
+                <div class="po-summary-card ord-stores">
+                    <div class="po-summary-value" id="ord-stores-count">0</div>
+                    <div class="po-summary-label">Stores Needing Orders</div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-6">
+                    <div class="card">
+                        <div class="card-title">Order Value by Store</div>
+                        <div class="chart-container">
+                            <canvas id="chart-ordering-store"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="card">
+                        <div class="card-title">Urgency Distribution</div>
+                        <div class="chart-container" style="height:280px">
+                            <canvas id="chart-ordering-urgency"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Order Details <span class="count" id="ord-total-badge">0 SKUs</span></div>
+                <div id="tbl-ordering"></div>
+            </div>
+        </section>
+
+        <!-- Upload Data Page -->
+        <section id="page-data-upload" class="page">
+            <!-- Login Form -->
+            <div id="upload-login" class="upload-login-container">
+                <div class="card upload-login-card">
+                    <div class="card-title">Upload Data Access</div>
+                    <div class="upload-login-form">
+                        <div class="form-group">
+                            <label class="filter-label">Username</label>
+                            <input type="text" id="upload-username" class="upload-input" autocomplete="username">
+                        </div>
+                        <div class="form-group">
+                            <label class="filter-label">Password</label>
+                            <input type="password" id="upload-password" class="upload-input" autocomplete="current-password">
+                        </div>
+                        <div id="upload-login-error" class="upload-error"></div>
+                        <button class="btn btn-primary" id="btn-upload-login">Sign In</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Interface -->
+            <div id="upload-interface" style="display:none">
+                <div class="page-header">
+                    <h2>Upload T-Mart Data</h2>
+                    <div style="display:flex;align-items:center;gap:12px">
+                        <span id="upload-user-info" class="file-info"></span>
+                        <button class="btn btn-reset" id="btn-upload-logout">Sign Out</button>
+                    </div>
+                </div>
+
+                <div class="upload-grid">
+                    <div class="upload-card" id="upload-card-soh" data-type="soh">
+                        <div class="upload-card-header">
+                            <div class="upload-card-number">1</div>
+                            <div>
+                                <div class="upload-card-title">Stock on Hand</div>
+                                <div class="upload-card-hint">SOH - tmart.xlsx</div>
+                            </div>
+                        </div>
+                        <div class="upload-dropzone" id="dropzone-soh">
+                            <div class="upload-dropzone-content">
+                                <div class="upload-icon">&#128196;</div>
+                                <p>Drag & drop or <label for="file-soh" class="upload-browse">browse</label></p>
+                                <input type="file" id="file-soh" accept=".xlsx,.xls,.csv" hidden>
+                            </div>
+                        </div>
+                        <div class="upload-file-status" id="status-soh"></div>
+                    </div>
+
+                    <div class="upload-card" id="upload-card-sales" data-type="sales">
+                        <div class="upload-card-header">
+                            <div class="upload-card-number">2</div>
+                            <div>
+                                <div class="upload-card-title">Sales Data</div>
+                                <div class="upload-card-hint">SKU_Sales.xlsx</div>
+                            </div>
+                        </div>
+                        <div class="upload-dropzone" id="dropzone-sales">
+                            <div class="upload-dropzone-content">
+                                <div class="upload-icon">&#128196;</div>
+                                <p>Drag & drop or <label for="file-sales" class="upload-browse">browse</label></p>
+                                <input type="file" id="file-sales" accept=".xlsx,.xls,.csv" hidden>
+                            </div>
+                        </div>
+                        <div class="upload-file-status" id="status-sales"></div>
+                    </div>
+
+                    <div class="upload-card" id="upload-card-po" data-type="po">
+                        <div class="upload-card-header">
+                            <div class="upload-card-number">3</div>
+                            <div>
+                                <div class="upload-card-title">POs Under Creation</div>
+                                <div class="upload-card-hint">POs under creation.xlsx</div>
+                            </div>
+                        </div>
+                        <div class="upload-dropzone" id="dropzone-po">
+                            <div class="upload-dropzone-content">
+                                <div class="upload-icon">&#128196;</div>
+                                <p>Drag & drop or <label for="file-po" class="upload-browse">browse</label></p>
+                                <input type="file" id="file-po" accept=".xlsx,.xls,.csv" hidden>
+                            </div>
+                        </div>
+                        <div class="upload-file-status" id="status-po"></div>
+                    </div>
+                </div>
+
+                <div class="upload-actions">
+                    <button class="btn btn-primary btn-lg" id="btn-process-data" disabled>Process & Update Dashboard</button>
+                    <div id="process-status" class="upload-process-status"></div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/filters.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/tables.js"></script>
+    <script src="js/export.js"></script>
+    <script src="js/upload.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
