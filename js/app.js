@@ -15,7 +15,12 @@ const App = {
 
         document.getElementById('btn-reset-filters').addEventListener('click', () => FilterState.reset());
 
-        this.switchPage('overview');
+        // If no data exists, go to upload page first
+        if (!Engine.hasData()) {
+            this.switchPage('data-upload');
+        } else {
+            this.switchPage('overview');
+        }
     },
 
     switchPage(page) {
@@ -51,6 +56,11 @@ const App = {
     },
 
     async loadOverview() {
+        if (!Engine.hasData()) {
+            this._showNoDataMessage('page-overview');
+            return;
+        }
+
         const data = await API.get('overview', FilterState.getParams());
 
         document.getElementById('kpi-total-skus').textContent = formatNumber(data.total_skus);
@@ -81,19 +91,28 @@ const App = {
             { data: 'pct_of_total', title: '% of Total', render: d => d + '%', className: 'dt-right' },
         ]);
 
-        if (data.files && data.files.length > 0) {
-            const f = data.files[0];
-            document.getElementById('file-info').textContent = `Data: ${f.name}`;
+        // Show data info
+        const filesInfo = Engine.getFilesInfo();
+        if (filesInfo.data_files && filesInfo.data_files.length > 0) {
+            const f = filesInfo.data_files[0];
+            const ts = f.last_modified && f.last_modified !== 'unknown'
+                ? new Date(f.last_modified).toLocaleDateString()
+                : '';
+            document.getElementById('file-info').textContent = `${f.rows} SKUs loaded` + (ts ? ` (${ts})` : '');
+        } else {
+            document.getElementById('file-info').textContent = 'No data loaded';
         }
     },
 
     async loadSkuDetail() {
+        if (!Engine.hasData()) { this._showNoDataMessage('page-sku-detail'); return; }
         const data = await API.get('skus', FilterState.getParams());
         Tables.skuTable('tbl-sku-detail', data.data || []);
         document.getElementById('sku-count-info').textContent = `${formatNumber(data.total)} SKUs`;
     },
 
     async loadSuppliers() {
+        if (!Engine.hasData()) { this._showNoDataMessage('page-suppliers'); return; }
         const data = await API.get('suppliers', FilterState.getParams());
         Charts.supplierHealth('chart-supplier-health', data);
         Tables.supplierTable('tbl-suppliers', data, async (supplier) => {
@@ -104,6 +123,7 @@ const App = {
     },
 
     async loadCategories() {
+        if (!Engine.hasData()) { this._showNoDataMessage('page-categories'); return; }
         const data = await API.get('categories', FilterState.getParams());
         Charts.categoryStacked('chart-category-stacked', data);
         Tables.categoryTable('tbl-categories', data, async (category) => {
@@ -114,6 +134,7 @@ const App = {
     },
 
     async loadNewPurchases() {
+        if (!Engine.hasData()) { this._showNoDataMessage('page-new-purchases'); return; }
         const data = await API.get('new-purchases', FilterState.getParams());
 
         document.getElementById('new-sku-count').textContent = data.new_count || 0;
@@ -136,6 +157,7 @@ const App = {
     },
 
     async loadLocations() {
+        if (!Engine.hasData()) { this._showNoDataMessage('page-locations'); return; }
         const data = await API.get('locations', FilterState.getParams());
         Charts.locationBar('chart-location-bar', data);
         Tables.simpleTable('tbl-locations', data, [
@@ -149,11 +171,12 @@ const App = {
     _poActiveStatus: null,
 
     async loadPoAssessment() {
+        if (!Engine.hasData()) { this._showNoDataMessage('page-po-assessment'); return; }
         const data = await API.get('po-assessment', FilterState.getParams());
 
         if (data.error) {
             document.getElementById('tbl-po-assessment').innerHTML =
-                '<div class="empty-state"><h3>PO File Not Found</h3><p>Place "POs under creation .xlsx" in the tmart_data folder.</p></div>';
+                '<div class="empty-state"><h3>PO File Not Found</h3><p>Upload a PO file on the Upload Data page.</p></div>';
             return;
         }
 
@@ -220,6 +243,7 @@ const App = {
     },
 
     async loadOrdering() {
+        if (!Engine.hasData()) { this._showNoDataMessage('page-ordering'); return; }
         const data = await API.get('ordering', FilterState.getParams());
 
         const s = data.summary || {};
@@ -236,6 +260,25 @@ const App = {
 
     async loadUpload() {
         await UploadManager.init();
+    },
+
+    _showNoDataMessage(pageId) {
+        // For pages that need data, show a friendly message
+        const pageEl = document.getElementById(pageId);
+        if (!pageEl) return;
+        const contentArea = pageEl.querySelector('.card, .kpi-grid, .page-header');
+        if (contentArea) {
+            // Insert message before the first element if not already present
+            if (!pageEl.querySelector('.no-data-banner')) {
+                const banner = document.createElement('div');
+                banner.className = 'no-data-banner';
+                banner.style.cssText = 'background:#FFF3E0;border:1px solid #FF5900;border-radius:8px;padding:24px;text-align:center;margin:20px 0;';
+                banner.innerHTML = '<h3 style="margin:0 0 8px;color:#411517;">No Data Loaded</h3>' +
+                    '<p style="margin:0;color:#666;">Upload your SOH and Sales files to get started.</p>' +
+                    '<button onclick="App.switchPage(\'data-upload\')" style="margin-top:12px;padding:8px 24px;background:#FF5900;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">Go to Upload Page</button>';
+                pageEl.insertBefore(banner, pageEl.firstChild);
+            }
+        }
     },
 
     _showLoading() {

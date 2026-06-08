@@ -2,23 +2,15 @@ const UploadManager = {
     authenticated: false,
     username: '',
     files: { soh: null, sales: null, po: null },
-    dataTypes: ['soh', 'sales', 'po'],
+    dataTypes: ['soh', 'sales'],
     allTypes: ['soh', 'sales', 'po'],
 
     async init() {
-        try {
-            const status = await API.get('upload-status');
-            if (status.authenticated) {
-                this.authenticated = true;
-                this.username = status.username;
-                this.files = {};
-                this.allTypes.forEach(t => {
-                    this.files[t] = status.files[t] && status.files[t].uploaded ? status.files[t] : null;
-                });
-            }
-        } catch (e) {
-            this.authenticated = false;
-        }
+        // Local mode: always authenticated, no server check needed
+        this.authenticated = true;
+        this.username = 'local';
+        this.files = { soh: null, sales: null, po: null };
+
         this._bindEvents();
         this._updateUI();
     },
@@ -35,7 +27,9 @@ const UploadManager = {
         loginBtn.addEventListener('click', () => this.login());
         logoutBtn.addEventListener('click', () => this.logout());
         processBtn.addEventListener('click', () => this.processFiles());
-        passField.addEventListener('keydown', (e) => { if (e.key === 'Enter') this.login(); });
+        if (passField) {
+            passField.addEventListener('keydown', (e) => { if (e.key === 'Enter') this.login(); });
+        }
 
         this.allTypes.forEach(type => {
             const dropzone = document.getElementById('dropzone-' + type);
@@ -62,34 +56,18 @@ const UploadManager = {
     },
 
     async login() {
-        const username = document.getElementById('upload-username').value.trim();
-        const password = document.getElementById('upload-password').value;
-        const errorEl = document.getElementById('upload-login-error');
-        errorEl.textContent = '';
-
-        if (!username || !password) {
-            errorEl.textContent = 'Please enter username and password';
-            return;
-        }
-
-        try {
-            const res = await API.post('login', { username, password });
-            this.authenticated = true;
-            this.username = res.username;
-            this.files = { soh: null, sales: null, po: null };
-            this._updateUI();
-        } catch (e) {
-            errorEl.textContent = e.message;
-        }
+        // Local mode: auto-succeed
+        this.authenticated = true;
+        this.username = 'local';
+        this.files = { soh: null, sales: null, po: null };
+        this._updateUI();
     },
 
     async logout() {
-        try { await API.post('logout'); } catch (e) { /* ignore */ }
-        this.authenticated = false;
-        this.username = '';
+        // Local mode: just reset UI state
+        this.authenticated = true;  // Stay authenticated in local mode
+        this.username = 'local';
         this.files = { soh: null, sales: null, po: null };
-        document.getElementById('upload-username').value = '';
-        document.getElementById('upload-password').value = '';
         this._updateUI();
     },
 
@@ -115,7 +93,7 @@ const UploadManager = {
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             const jsonData = XLSX.utils.sheet_to_json(firstSheet);
 
-            this._setCardStatus(type, `Uploading ${jsonData.length} rows...`);
+            this._setCardStatus(type, `Storing ${jsonData.length} rows...`);
 
             const res = await API.post('upload', { type: type, data: jsonData });
 
@@ -167,14 +145,11 @@ const UploadManager = {
     _updateUI() {
         const loginEl = document.getElementById('upload-login');
         const interfaceEl = document.getElementById('upload-interface');
-        if (this.authenticated) {
-            loginEl.style.display = 'none';
-            interfaceEl.style.display = 'block';
-            document.getElementById('upload-user-info').textContent = 'Signed in as ' + this.username;
-        } else {
-            loginEl.style.display = 'flex';
-            interfaceEl.style.display = 'none';
-        }
+
+        // Local mode: always show upload interface, hide login
+        loginEl.style.display = 'none';
+        interfaceEl.style.display = 'block';
+        document.getElementById('upload-user-info').textContent = 'Local Mode';
 
         this.allTypes.forEach(type => {
             const card = document.getElementById('upload-card-' + type);
@@ -195,6 +170,7 @@ const UploadManager = {
 
     _updateProcessButton() {
         const btn = document.getElementById('btn-process-data');
+        // Only require SOH and Sales (PO is optional)
         const ready = this.dataTypes.every(t => this.files[t]);
         btn.disabled = !ready;
     },
