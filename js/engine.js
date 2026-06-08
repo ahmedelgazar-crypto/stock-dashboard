@@ -1358,12 +1358,11 @@ const Engine = (() => {
 
     function loadData() {
         var raw = localStorage.getItem(CONFIG.STORAGE_KEY);
-        if (!raw) return [];
-        try {
-            return JSON.parse(raw);
-        } catch (e) {
-            return [];
+        if (raw) {
+            try { return JSON.parse(raw); } catch (e) { /* fall through */ }
         }
+        if (_bundledData && _bundledData.length > 0) return _bundledData;
+        return [];
     }
 
     function savePOData(poData) {
@@ -1391,8 +1390,35 @@ const Engine = (() => {
         localStorage.removeItem('stock_upload_po');
     }
 
+    var _bundledData = null;
+    var _bundledLoading = false;
+    var _bundledLoaded = false;
+
     function hasData() {
-        return !!localStorage.getItem(CONFIG.STORAGE_KEY);
+        return _bundledLoaded || !!localStorage.getItem(CONFIG.STORAGE_KEY);
+    }
+
+    function loadBundledData() {
+        if (_bundledLoaded || _bundledLoading) return Promise.resolve();
+        _bundledLoading = true;
+        return fetch('data/inventory.json')
+            .then(function(res) { return res.json(); })
+            .then(function(arr) {
+                if (!arr || arr.length < 2) return;
+                var headers = arr[0];
+                var rows = [];
+                for (var i = 1; i < arr.length; i++) {
+                    var obj = {};
+                    for (var j = 0; j < headers.length; j++) {
+                        obj[headers[j]] = arr[i][j];
+                    }
+                    rows.push(obj);
+                }
+                _bundledData = rows;
+                _bundledLoaded = true;
+                _bundledLoading = false;
+            })
+            .catch(function() { _bundledLoading = false; });
     }
 
     /**
@@ -1535,6 +1561,7 @@ const Engine = (() => {
         },
         clearData: clearData,
         hasData: hasData,
+        loadBundledData: loadBundledData,
 
         // Processing
         processUploads: processUploads,

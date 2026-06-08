@@ -2,6 +2,13 @@ const App = {
     currentPage: 'overview',
 
     async init() {
+        // Load bundled data from JSON file if no local data
+        if (!Engine.hasData()) {
+            this._showLoading();
+            await Engine.loadBundledData();
+            this._hideLoading();
+        }
+
         await FilterState.init();
         ExportManager.init();
         FilterState.onChange(() => this.loadCurrentPage());
@@ -15,7 +22,6 @@ const App = {
 
         document.getElementById('btn-reset-filters').addEventListener('click', () => FilterState.reset());
 
-        // If no data exists, go to upload page first
         if (!Engine.hasData()) {
             this.switchPage('data-upload');
         } else {
