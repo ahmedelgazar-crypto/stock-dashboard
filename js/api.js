@@ -1,3 +1,5 @@
+const _uploadCache = {};
+
 const API = {
     async get(action, params = {}) {
         const period = parseInt(params.period) || CONFIG.DEFAULT_PERIOD;
@@ -85,14 +87,15 @@ const API = {
         if (action === 'login') return { success: true, username: 'local' };
         if (action === 'logout') return { success: true };
         if (action === 'upload') {
-            // body.type = 'soh'|'sales'|'po', body.data = array of objects from SheetJS
-            const key = 'stock_upload_' + body.type;
-            localStorage.setItem(key, JSON.stringify(body.data));
+            _uploadCache[body.type] = body.data;
             return { success: true, type: body.type, rows: body.data.length };
         }
         if (action === 'process') {
-            const result = Engine.processUploads();
+            const result = Engine.processUploadsFromMemory(_uploadCache);
             if (result.error) throw new Error(result.error);
+            _uploadCache.soh = null;
+            _uploadCache.sales = null;
+            _uploadCache.po = null;
             return result;
         }
         return { error: 'Unknown action' };

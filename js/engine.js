@@ -1347,6 +1347,75 @@ const Engine = (() => {
         }
     }
 
+    function processUploadsFromMemory(cache) {
+        try {
+            var sohData = cache.soh;
+            var salesData = cache.sales;
+            var poRawData = cache.po;
+
+            if (!sohData || !Array.isArray(sohData) || sohData.length < 1) {
+                return { error: 'SOH data is missing. Please upload SOH file.' };
+            }
+            if (!salesData || !Array.isArray(salesData) || salesData.length < 1) {
+                return { error: 'Sales data is missing. Please upload Sales file.' };
+            }
+
+            var sohBySku = {};
+            for (var i = 0; i < sohData.length; i++) {
+                var row = normalizeUploadRow(sohData[i], 'soh');
+                if (!row || !row.sku) continue;
+                var sku = String(row.sku).trim();
+                if (!sohBySku[sku]) {
+                    sohBySku[sku] = { sku: sku, name: row.name || 'Unknown', category: row.category || '', sub_category: row.sub_category || '', supplier: row.supplier || '', location: row.location || '', stock_qty: 0, cost_price: row.cost_price || 0, selling_price: row.selling_price || 0, stock_value: 0, warehouse_count: 0 };
+                }
+                sohBySku[sku].stock_qty += (row.stock_qty || 0);
+                sohBySku[sku].stock_value += (row.stock_value || 0);
+                sohBySku[sku].warehouse_count++;
+                if ((row.stock_qty || 0) > 0) { if (row.name) sohBySku[sku].name = row.name; if (row.location) sohBySku[sku].location = row.location; if (row.category) sohBySku[sku].category = row.category; }
+            }
+
+            var salesBySku = {};
+            for (var s = 0; s < salesData.length; s++) {
+                var sRow = normalizeUploadRow(salesData[s], 'sales');
+                if (!sRow || !sRow.sku) continue;
+                var sSku = String(sRow.sku).trim();
+                if (!salesBySku[sSku]) { salesBySku[sSku] = { sales_qty: 0, sales_orders: 0, sales_returns: 0, sales_revenue: 0, sales_cogs: 0 }; }
+                salesBySku[sSku].sales_qty += (sRow.sales_qty || 0); salesBySku[sSku].sales_orders += (sRow.sales_orders || 0); salesBySku[sSku].sales_returns += (sRow.sales_returns || 0); salesBySku[sSku].sales_revenue += (sRow.sales_revenue || 0); salesBySku[sSku].sales_cogs += (sRow.sales_cogs || 0);
+            }
+
+            var merged = [];
+            for (var msku in sohBySku) {
+                var inv = sohBySku[msku]; var sal = salesBySku[msku] || {};
+                var costPrice = inv.cost_price || 0;
+                if (costPrice === 0 && (sal.sales_cogs || 0) > 0 && (sal.sales_qty || 0) > 0) costPrice = round2(sal.sales_cogs / sal.sales_qty);
+                var sellingPrice = inv.selling_price || 0;
+                if (sellingPrice === 0 && (sal.sales_revenue || 0) > 0 && (sal.sales_qty || 0) > 0) sellingPrice = round2(sal.sales_revenue / sal.sales_qty);
+                var stockValue = inv.stock_value || 0;
+                if (stockValue === 0) stockValue = round2(inv.stock_qty * costPrice);
+                merged.push({ sku: msku, name: inv.name, category: inv.category || 'Uncategorized', sub_category: inv.sub_category || '', supplier: inv.supplier || 'Unknown', location: inv.location || 'Default', country: '', warehouse_type: '', stock_qty: Math.round(inv.stock_qty), sales_qty: Math.round(sal.sales_qty || 0), purchase_qty: 0, sales_orders: Math.round(sal.sales_orders || 0), sales_returns: Math.round(sal.sales_returns || 0), sales_revenue: round2(sal.sales_revenue || 0), sales_cogs: round2(sal.sales_cogs || 0), cost_price: costPrice, selling_price: sellingPrice, stock_value: stockValue, last_sale_date: '', last_purchase_date: '', warehouse_count: inv.warehouse_count || 1 });
+            }
+
+            // Store in memory (replaces bundled data)
+            _bundledData = merged;
+            _bundledLoaded = true;
+
+            // Handle PO data in memory
+            var poUpdated = false;
+            if (poRawData && Array.isArray(poRawData) && poRawData.length > 0) {
+                _memoryPOData = poRawData;
+                poUpdated = true;
+            }
+
+            var msg = 'Data updated successfully! ' + merged.length + ' SKUs processed.';
+            if (poUpdated) msg += ' PO file updated.';
+            return { success: true, message: msg, sku_count: merged.length };
+        } catch (err) {
+            return { error: 'Processing failed: ' + err.message };
+        }
+    }
+
+    var _memoryPOData = null;
+
     // =========================================================================
     // localStorage persistence
     // =========================================================================
@@ -1550,13 +1619,11 @@ const Engine = (() => {
         loadData: loadData,
         savePOData: savePOData,
         loadPOData: function() {
-            var raw = loadPODataFromStorage();
+            var raw = _memoryPOData || loadPODataFromStorage();
             if (!raw || raw.length === 0) return [];
-            // If raw is a 2D array (uploaded PO), parse it
             if (Array.isArray(raw) && raw.length > 0 && Array.isArray(raw[0])) {
                 return parsePOArray(raw);
             }
-            // If raw is array of objects (from sheet_to_json), normalize PO columns
             return parsePOObjects(raw);
         },
         clearData: clearData,
@@ -1565,6 +1632,7 @@ const Engine = (() => {
 
         // Processing
         processUploads: processUploads,
+        processUploadsFromMemory: processUploadsFromMemory,
         loadAndAssess: loadAndAssess,
         getFilesInfo: getFilesInfo,
 
