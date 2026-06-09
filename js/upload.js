@@ -2,7 +2,7 @@ const UploadManager = {
     authenticated: false,
     username: '',
     files: { soh: null, sales: null, po: null },
-    dataTypes: ['soh', 'sales'],
+    dataTypes: ['soh', 'sales', 'po'],
     allTypes: ['soh', 'sales', 'po'],
 
     async init() {
