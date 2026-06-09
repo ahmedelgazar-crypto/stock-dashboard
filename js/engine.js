@@ -297,7 +297,7 @@ const Engine = (() => {
 
     function assessAll(data, analysisDays) {
         if (!data || data.length === 0) return [];
-        if (!analysisDays) analysisDays = 90;
+        analysisDays = 30;
 
         // Determine reference date: max of now and all date columns
         var referenceDate = new Date();
