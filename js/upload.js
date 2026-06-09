@@ -87,25 +87,33 @@ const UploadManager = {
         this._setCardStatus(type, 'Parsing file...');
 
         try {
-            // Parse file in browser using SheetJS
             const arrayBuffer = await file.arrayBuffer();
+            this._setCardStatus(type, 'Reading Excel...');
             const workbook = XLSX.read(arrayBuffer, { type: 'array' });
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+            const cols = jsonData.length > 0 ? Object.keys(jsonData[0]) : [];
 
-            this._setCardStatus(type, `Storing ${jsonData.length} rows...`);
+            this._setCardStatus(type, `Parsed ${jsonData.length} rows, ${cols.length} columns`);
+            this._log(`${type}: ${jsonData.length} rows, columns: ${cols.join(', ')}`);
 
             const res = await API.post('upload', { type: type, data: jsonData });
 
             const sizeKb = Math.round(file.size / 1024);
             this.files[type] = { uploaded: true, filename: file.name, size_kb: sizeKb, rows: jsonData.length };
             card.className = 'upload-card uploaded';
-            this._setCardStatus(type, `${file.name} (${sizeKb} KB, ${jsonData.length} rows)`, true);
+            this._setCardStatus(type, `${file.name} (${sizeKb} KB, ${jsonData.length} rows, ${cols.length} cols)`, false);
             this._updateProcessButton();
         } catch (e) {
             card.className = 'upload-card error';
-            this._setCardError(type, e.message);
+            this._setCardError(type, 'ERROR: ' + e.message);
+            this._log(`${type} ERROR: ${e.message}`);
         }
+    },
+
+    _log(msg) {
+        const el = document.getElementById('debug-log');
+        if (el) el.textContent += msg + '\n';
     },
 
     async processFiles() {
@@ -117,7 +125,9 @@ const UploadManager = {
         statusEl.className = 'upload-process-status processing';
 
         try {
+            this._log('Processing started...');
             const res = await API.post('process');
+            this._log('Process result: ' + JSON.stringify(res));
             statusEl.textContent = res.message || 'Data processed successfully!';
             statusEl.className = 'upload-process-status success';
             btn.textContent = 'Done!';
@@ -130,12 +140,11 @@ const UploadManager = {
                 });
                 btn.textContent = 'Process & Update Dashboard';
                 this._updateProcessButton();
-                statusEl.textContent = '';
-                statusEl.className = 'upload-process-status';
                 App.switchPage('overview');
-            }, 2000);
+            }, 3000);
         } catch (e) {
-            statusEl.textContent = e.message;
+            this._log('Process ERROR: ' + e.message);
+            statusEl.textContent = 'Error: ' + e.message;
             statusEl.className = 'upload-process-status error';
             btn.textContent = 'Process & Update Dashboard';
             btn.disabled = false;
