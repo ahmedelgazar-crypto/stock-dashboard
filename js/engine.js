@@ -13,18 +13,22 @@ const Engine = (() => {
     const COLUMN_MAP = {
         sku: ['sku', 'item code', 'item_code', 'product code', 'product_code', 'barcode', 'article', 'sku_id'],
         name: ['name', 'item name', 'item_name', 'product name', 'product_name', 'description', 'item description', 'item name (english)'],
-        category: ['category', 'product category', 'group', 'department', 'class', 'category name'],
+        category: ['category', 'product category', 'group', 'department', 'class', 'category name', 'parent_category', 'parent category'],
         sub_category: ['sub_category', 'sub-category', 'sub-category name', 'subcategory'],
-        supplier: ['supplier', 'vendor', 'supplier name', 'vendor name'],
-        stock_qty: ['stock qty', 'stock_qty', 'on hand', 'on_hand', 'quantity on hand', 'qty on hand', 'soh', 'stock', 'stock closing quantity'],
-        sales_qty: ['sales qty', 'sales_qty', 'sold qty', 'units sold', 'qty sold', 'sales', 'grand total', 'sales_total'],
+        supplier: ['supplier', 'vendor', 'supplier name', 'vendor name', 'supplier_name'],
+        stock_qty: ['stock qty', 'stock_qty', 'on hand', 'on_hand', 'quantity on hand', 'qty on hand', 'soh', 'stock', 'stock closing quantity', 'stock_on_hand', 'stock on hand'],
+        sales_qty: ['sales qty', 'sales_qty', 'sold qty', 'units sold', 'qty sold', 'sales', 'grand total', 'sales_total', 'fulfilled_quantity', 'fulfilled quantity', 'fulfilled_qty'],
         purchase_qty: ['purchase qty', 'purchase_qty', 'ordered qty', 'qty purchased', 'qty ordered', 'po qty', 'purchases'],
-        location: ['location', 'warehouse', 'store', 'branch', 'site', 'warehouse name'],
-        cost_price: ['cost price', 'cost_price', 'unit cost', 'buying price', 'cost', 'avg cost', 'stock closing wac (lc)'],
-        selling_price: ['selling price', 'selling_price', 'retail price', 'unit price', 'price', 'srp', 'item price (avg.)'],
-        stock_value: ['stock_value', 'stock value', 'stock closing value (lc)'],
+        location: ['location', 'warehouse', 'store', 'branch', 'site', 'warehouse name', 'warehouse_name', 'store_name', 'store name'],
+        cost_price: ['cost price', 'cost_price', 'unit cost', 'buying price', 'cost', 'avg cost', 'stock closing wac (lc)', 'unit_cost'],
+        selling_price: ['selling price', 'selling_price', 'retail price', 'unit price', 'price', 'srp', 'item price (avg.)', 'paid_unit_price', 'paid unit price', 'listed_unit_price'],
+        stock_value: ['stock_value', 'stock value', 'stock closing value (lc)', 'value'],
         last_sale_date: ['last sale date', 'last_sale_date', 'last sold', 'last sale'],
         last_purchase_date: ['last purchase date', 'last_purchase_date', 'last ordered', 'last po date', 'last purchase'],
+        sales_orders: ['sales_orders', 'ordered_quantity', 'ordered quantity'],
+        sales_returns: ['sales_returns', 'returned_quantity', 'returned quantity'],
+        sales_revenue: ['sales_revenue', 'total_amount', 'total amount'],
+        sales_cogs: ['sales_cogs', 'total_cogs', 'total cogs'],
         reorder_point: ['reorder point', 'reorder_point', 'min stock', 'safety stock', 'min qty', 'rop'],
         warehouse_type: ['warehouse_type', 'type'],
         country: ['country', 'country code'],
@@ -1119,13 +1123,15 @@ const Engine = (() => {
 
         // Try to match column names using COLUMN_MAP
         for (var key in row) {
-            var lowerKey = String(key).trim().toLowerCase().replace(/\s+/g, ' ');
+            var lowerKey = String(key).trim().toLowerCase();
+            var lowerKeySpaces = lowerKey.replace(/_/g, ' ').replace(/\s+/g, ' ');
+            var lowerKeyUnder = lowerKey.replace(/\s+/g, '_');
             var canonical = null;
 
             for (var mapKey in COLUMN_MAP) {
                 var aliases = COLUMN_MAP[mapKey];
                 for (var a = 0; a < aliases.length; a++) {
-                    if (lowerKey === aliases[a]) {
+                    if (lowerKey === aliases[a] || lowerKeySpaces === aliases[a] || lowerKeyUnder === aliases[a]) {
                         canonical = mapKey;
                         break;
                     }
