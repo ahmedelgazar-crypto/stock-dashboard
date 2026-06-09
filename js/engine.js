@@ -1395,14 +1395,17 @@ const Engine = (() => {
                 merged.push({ sku: msku, name: inv.name, category: inv.category || 'Uncategorized', sub_category: inv.sub_category || '', supplier: inv.supplier || 'Unknown', location: inv.location || 'Default', country: '', warehouse_type: '', stock_qty: Math.round(inv.stock_qty), sales_qty: Math.round(sal.sales_qty || 0), purchase_qty: 0, sales_orders: Math.round(sal.sales_orders || 0), sales_returns: Math.round(sal.sales_returns || 0), sales_revenue: round2(sal.sales_revenue || 0), sales_cogs: round2(sal.sales_cogs || 0), cost_price: costPrice, selling_price: sellingPrice, stock_value: stockValue, last_sale_date: '', last_purchase_date: '', warehouse_count: inv.warehouse_count || 1 });
             }
 
-            // Store in memory (replaces bundled data)
-            _bundledData = merged;
-            _bundledLoaded = true;
+            // Store in memory + IndexedDB (persists across refreshes)
+            _cachedData = merged;
+            _dataLoaded = true;
+            saveData(merged);
 
-            // Handle PO data in memory
+            // Handle PO data
             var poUpdated = false;
             if (poRawData && Array.isArray(poRawData) && poRawData.length > 0) {
+                _cachedPO = poRawData;
                 _memoryPOData = poRawData;
+                savePOData(poRawData);
                 poUpdated = true;
             }
 
@@ -1417,46 +1420,116 @@ const Engine = (() => {
     var _memoryPOData = null;
 
     // =========================================================================
-    // localStorage persistence
+    // IndexedDB persistence (handles large datasets, no size limit)
     // =========================================================================
 
+    var DB_NAME = 'StockDashboard';
+    var DB_VERSION = 1;
+    var _dbReady = false;
+    var _cachedData = null;
+    var _cachedPO = null;
+    var _dataLoaded = false;
+
+    function openDB() {
+        return new Promise(function(resolve, reject) {
+            var req = indexedDB.open(DB_NAME, DB_VERSION);
+            req.onupgradeneeded = function(e) {
+                var db = e.target.result;
+                if (!db.objectStoreNames.contains('data')) db.createObjectStore('data');
+            };
+            req.onsuccess = function(e) { resolve(e.target.result); };
+            req.onerror = function(e) { reject(e.target.error); };
+        });
+    }
+
     function saveData(rawData) {
-        localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(rawData));
-        localStorage.setItem(CONFIG.STORAGE_KEY + '_ts', new Date().toISOString());
+        _cachedData = rawData;
+        _dataLoaded = true;
+        return openDB().then(function(db) {
+            return new Promise(function(resolve, reject) {
+                var tx = db.transaction('data', 'readwrite');
+                var store = tx.objectStore('data');
+                store.put(rawData, 'inventory');
+                store.put(new Date().toISOString(), 'inventory_ts');
+                tx.oncomplete = function() { resolve(); };
+                tx.onerror = function(e) { reject(e.target.error); };
+            });
+        }).catch(function() {});
+    }
+
+    function loadDataFromDB() {
+        return openDB().then(function(db) {
+            return new Promise(function(resolve, reject) {
+                var tx = db.transaction('data', 'readonly');
+                var store = tx.objectStore('data');
+                var req = store.get('inventory');
+                req.onsuccess = function() {
+                    var data = req.result || [];
+                    _cachedData = data;
+                    _dataLoaded = data.length > 0;
+                    resolve(data);
+                };
+                req.onerror = function() { resolve([]); };
+            });
+        }).catch(function() { return []; });
     }
 
     function loadData() {
-        var raw = localStorage.getItem(CONFIG.STORAGE_KEY);
-        if (raw) {
-            try { return JSON.parse(raw); } catch (e) { /* fall through */ }
-        }
+        if (_cachedData && _cachedData.length > 0) return _cachedData;
         if (_bundledData && _bundledData.length > 0) return _bundledData;
         return [];
     }
 
     function savePOData(poData) {
-        localStorage.setItem(CONFIG.STORAGE_PO_KEY, JSON.stringify(poData));
-        localStorage.setItem(CONFIG.STORAGE_PO_KEY + '_ts', new Date().toISOString());
+        _cachedPO = poData;
+        return openDB().then(function(db) {
+            return new Promise(function(resolve, reject) {
+                var tx = db.transaction('data', 'readwrite');
+                var store = tx.objectStore('data');
+                store.put(poData, 'po');
+                store.put(new Date().toISOString(), 'po_ts');
+                tx.oncomplete = function() { resolve(); };
+                tx.onerror = function(e) { reject(e.target.error); };
+            });
+        }).catch(function() {});
     }
 
     function loadPODataFromStorage() {
-        var raw = localStorage.getItem(CONFIG.STORAGE_PO_KEY);
-        if (!raw) return [];
-        try {
-            return JSON.parse(raw);
-        } catch (e) {
-            return [];
-        }
+        if (_cachedPO && _cachedPO.length > 0) return _cachedPO;
+        if (_memoryPOData && _memoryPOData.length > 0) return _memoryPOData;
+        return [];
+    }
+
+    function loadPOFromDB() {
+        return openDB().then(function(db) {
+            return new Promise(function(resolve, reject) {
+                var tx = db.transaction('data', 'readonly');
+                var store = tx.objectStore('data');
+                var req = store.get('po');
+                req.onsuccess = function() {
+                    _cachedPO = req.result || [];
+                    resolve(_cachedPO);
+                };
+                req.onerror = function() { resolve([]); };
+            });
+        }).catch(function() { return []; });
     }
 
     function clearData() {
-        localStorage.removeItem(CONFIG.STORAGE_KEY);
-        localStorage.removeItem(CONFIG.STORAGE_KEY + '_ts');
-        localStorage.removeItem(CONFIG.STORAGE_PO_KEY);
-        localStorage.removeItem(CONFIG.STORAGE_PO_KEY + '_ts');
-        localStorage.removeItem('stock_upload_soh');
-        localStorage.removeItem('stock_upload_sales');
-        localStorage.removeItem('stock_upload_po');
+        _cachedData = null;
+        _cachedPO = null;
+        _dataLoaded = false;
+        _bundledData = null;
+        _bundledLoaded = false;
+        _memoryPOData = null;
+        return openDB().then(function(db) {
+            return new Promise(function(resolve) {
+                var tx = db.transaction('data', 'readwrite');
+                tx.objectStore('data').clear();
+                tx.oncomplete = function() { resolve(); };
+                tx.onerror = function() { resolve(); };
+            });
+        }).catch(function() {});
     }
 
     var _bundledData = null;
@@ -1464,7 +1537,19 @@ const Engine = (() => {
     var _bundledLoaded = false;
 
     function hasData() {
-        return _bundledLoaded || !!localStorage.getItem(CONFIG.STORAGE_KEY);
+        return _dataLoaded || _bundledLoaded || (_cachedData && _cachedData.length > 0);
+    }
+
+    function initDB() {
+        return loadDataFromDB().then(function(data) {
+            if (data && data.length > 0) {
+                _cachedData = data;
+                _dataLoaded = true;
+            }
+            return loadPOFromDB();
+        }).then(function(po) {
+            if (po && po.length > 0) _cachedPO = po;
+        }).catch(function() {});
     }
 
     function loadBundledData() {
@@ -1629,6 +1714,7 @@ const Engine = (() => {
         clearData: clearData,
         hasData: hasData,
         loadBundledData: loadBundledData,
+        initDB: initDB,
 
         // Processing
         processUploads: processUploads,

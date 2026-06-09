@@ -2,6 +2,7 @@ const App = {
     currentPage: 'overview',
 
     async init() {
+        await Engine.initDB();
         await FilterState.init();
         ExportManager.init();
         FilterState.onChange(() => this.loadCurrentPage());
