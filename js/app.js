@@ -296,8 +296,20 @@ const App = {
 
     _checkAccess() {
         const KEY = 'stock_dash_auth';
-        const PASS = 'tmart2026';
-        if (sessionStorage.getItem(KEY) === 'true') return true;
+        const ALLOWED = [
+            'ahmed.elgazar@talabat.com',
+            'alix.julien@talabat.com',
+            'bgalal@talabat.com',
+            'devasena.k@talabat.com',
+            'brice.arnaud@talabat.com',
+            'hamamsy@talabat.com',
+            'cristel.mejia@talabat.com',
+            'mostafa.zeyada@talabat.com',
+            'muhammed.tharuvana@talabat.com',
+            'sherif.magdy@talabat.com'
+        ];
+        const saved = sessionStorage.getItem(KEY);
+        if (saved && ALLOWED.includes(saved)) return true;
 
         document.body.innerHTML = '';
         const gate = document.createElement('div');
@@ -306,24 +318,25 @@ const App = {
             <div style="background:#fff;padding:40px;border-radius:12px;box-shadow:0 4px 24px rgba(65,21,23,0.15);text-align:center;max-width:380px;width:100%">
                 <div style="font-size:20px;font-weight:700;color:#411517;margin-bottom:4px">Stock Efficiency Dashboard</div>
                 <div style="font-size:13px;color:#6B5B5E;margin-bottom:24px">Talabat internal access only</div>
-                <input type="password" id="gate-pass" placeholder="Enter access code" style="width:100%;padding:12px;border:1px solid #E5D9CF;border-radius:8px;font-size:14px;margin-bottom:12px;box-sizing:border-box">
+                <input type="email" id="gate-email" placeholder="Enter your @talabat.com email" style="width:100%;padding:12px;border:1px solid #E5D9CF;border-radius:8px;font-size:14px;margin-bottom:12px;box-sizing:border-box">
                 <div id="gate-error" style="color:#DC2626;font-size:13px;margin-bottom:12px;min-height:20px"></div>
                 <button id="gate-btn" style="width:100%;padding:12px;background:#FF5900;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">Access Dashboard</button>
             </div>`;
         document.body.appendChild(gate);
 
-        const input = document.getElementById('gate-pass');
+        const input = document.getElementById('gate-email');
         const btn = document.getElementById('gate-btn');
         const err = document.getElementById('gate-error');
 
         const tryLogin = () => {
-            if (input.value === PASS) {
-                sessionStorage.setItem(KEY, 'true');
+            const email = input.value.trim().toLowerCase();
+            if (ALLOWED.includes(email)) {
+                sessionStorage.setItem(KEY, email);
                 location.reload();
+            } else if (!email.endsWith('@talabat.com')) {
+                err.textContent = 'Please use your @talabat.com email';
             } else {
-                err.textContent = 'Invalid access code';
-                input.value = '';
-                input.focus();
+                err.textContent = 'Access not authorized. Contact Ahmed Elgazar.';
             }
         };
         btn.addEventListener('click', tryLogin);
