@@ -1,0 +1,4523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Efficiency Dashboard</title>
+    <!-- External CDN stylesheets -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
+    <!-- Inline CSS -->
+    <style>
+/* Contents of style.css */
+:root {
+    --primary-orange: #FF5900;
+    --dark-red: #411517;
+    --cream: #F4EDE3;
+    --lime: #CFFF00;
+    --bg-main: #F4EDE3;
+    --bg-card: #FFFFFF;
+    --bg-nav: #411517;
+    --text-primary: #411517;
+    --text-secondary: #6B5B5E;
+    --text-light: #F4EDE3;
+    --accent: #FF5900;
+    --accent2: #CFFF00;
+    --border: #E5D9CF;
+    --shadow: 0 2px 8px rgba(65,21,23,0.08);
+    --radius: 8px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg-main);
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+/* Navbar */
+.navbar {
+    background: var(--bg-nav);
+    color: var(--text-light);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(65,21,23,0.2);
+}
+
+.navbar-brand {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-right: 32px;
+    white-space: nowrap;
+}
+
+.navbar-brand span { color: var(--accent); }
+
+.nav-links {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+}
+
+.nav-links a {
+    color: var(--text-light);
+    text-decoration: none;
+    padding: 8px 14px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s;
+    opacity: 0.75;
+}
+
+.nav-links a:hover { opacity: 1; background: rgba(255,255,255,0.1); }
+.nav-links a.active { background: var(--accent); opacity: 1; color: #fff; }
+
+.file-info {
+    font-size: 12px;
+    opacity: 0.6;
+    white-space: nowrap;
+}
+
+/* Filter Bar */
+.filter-bar {
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    box-shadow: var(--shadow);
+}
+
+.filter-bar select, .filter-bar input[type="text"] {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+    background: #fff;
+    color: var(--text-primary);
+    min-width: 130px;
+}
+
+.filter-bar select:focus, .filter-bar input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(255,89,0,0.15);
+}
+
+.filter-bar .filter-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+}
+
+.filter-bar .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.btn {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #E04E00; }
+
+.btn-export { background: var(--dark-red); color: var(--text-light); }
+.btn-export:hover { background: #5A2022; }
+
+.btn-lime { background: var(--lime); color: var(--dark-red); }
+.btn-lime:hover { background: #B8D900; }
+
+.btn-reset { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+.btn-reset:hover { background: var(--border); }
+
+.filter-actions {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
+}
+
+/* Main Content */
+.main-content {
+    padding: 24px;
+    max-width: 1440px;
+    margin: 0 auto;
+}
+
+.page { display: none; }
+.page.active { display: block; }
+
+/* Cards */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.kpi-card {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    border-left: 4px solid var(--accent);
+    transition: transform 0.2s;
+}
+
+.kpi-card:hover { transform: translateY(-2px); }
+.kpi-card.green { border-left-color: #22C55E; }
+.kpi-card.red { border-left-color: #DC2626; }
+.kpi-card.orange { border-left-color: var(--accent); }
+.kpi-card.blue { border-left-color: #3B82F6; }
+.kpi-card.yellow { border-left-color: #EAB308; }
+
+.kpi-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.kpi-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+/* Chart + Table Layout */
+.row { display: flex; gap: 24px; margin-bottom: 24px; flex-wrap: wrap; }
+.col-6 { flex: 1; min-width: 300px; }
+.col-8 { flex: 2; min-width: 400px; }
+.col-4 { flex: 1; min-width: 280px; }
+
+.card {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    margin-bottom: 24px;
+}
+
+.card-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.card-title .count {
+    background: var(--accent);
+    color: #fff;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.chart-container { position: relative; height: 350px; }
+
+/* Status Badge */
+.status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.badge-new {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    background: var(--lime);
+    color: var(--dark-red);
+    margin-left: 4px;
+}
+
+.badge-recent {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    background: #DBEAFE;
+    color: #1E40AF;
+    margin-left: 4px;
+}
+
+/* DataTables Overrides */
+table.dataTable thead th {
+    background: var(--dark-red) !important;
+    color: var(--text-light) !important;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 10px 8px !important;
+    border-bottom: none !important;
+}
+
+table.dataTable tbody td {
+    font-size: 13px;
+    padding: 8px !important;
+    border-bottom: 1px solid var(--border) !important;
+}
+
+table.dataTable tbody tr:hover { background: rgba(255,89,0,0.04) !important; }
+table.dataTable tbody tr.row-new-sku { background: rgba(207,255,0,0.1) !important; }
+
+.dataTables_wrapper .dataTables_filter input {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 8px;
+}
+
+.dataTables_wrapper .dt-buttons .dt-button {
+    background: var(--dark-red) !important;
+    color: var(--text-light) !important;
+    border: none !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+    padding: 4px 10px !important;
+}
+
+.drilldown-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+}
+.drilldown-link:hover { text-decoration: underline; }
+
+/* Section Titles */
+.section-title {
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--accent);
+    display: inline-block;
+}
+
+/* Loading */
+.loading-overlay {
+    display: none;
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(244,237,227,0.7);
+    z-index: 50;
+    align-items: center;
+    justify-content: center;
+}
+
+.loading-overlay.active { display: flex; }
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Page-specific */
+.new-purchase-section {
+    border: 2px solid var(--lime);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 24px;
+    background: rgba(207,255,0,0.05);
+}
+
+.new-purchase-section .card-title { color: var(--dark-red); }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .navbar { padding: 0 12px; height: auto; flex-wrap: wrap; padding: 8px 12px; }
+    .nav-links { overflow-x: auto; padding: 4px 0; }
+    .nav-links a { font-size: 12px; padding: 6px 10px; }
+    .filter-bar { padding: 8px 12px; }
+    .main-content { padding: 12px; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .row { flex-direction: column; }
+}
+
+/* Contents of dashboard.css */
+/* Additional dashboard-specific styles */
+
+.sku-count-info {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+}
+
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.page-header h2 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.stat-pills {
+    display: flex;
+    gap: 8px;
+}
+
+.stat-pill {
+    background: var(--bg-card);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.stat-pill .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-secondary);
+}
+
+.empty-state h3 {
+    font-size: 18px;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.empty-state p { font-size: 14px; }
+
+/* New Purchases highlight cards */
+.highlight-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.highlight-card {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow);
+    text-align: center;
+}
+
+.highlight-card.lime { border-top: 4px solid var(--lime); }
+.highlight-card.blue { border-top: 4px solid #3B82F6; }
+
+.highlight-card .value {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.highlight-card .label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* PO Assessment */
+.po-disclaimer {
+    background: var(--bg-card, #fff);
+    border-radius: var(--radius, 10px);
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow, 0 1px 3px rgba(0,0,0,0.08));
+    border-left: 4px solid var(--accent, #FF5900);
+}
+.po-disclaimer-title {
+    font-weight: 700;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--dark-red, #411517);
+    margin-bottom: 8px;
+}
+.po-disclaimer-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+.po-disclaimer-item {
+    font-size: 13px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 6px;
+}
+.po-disclaimer-item.approved { background: #DCFCE7; color: #166534; }
+.po-disclaimer-item.review { background: #FEF3C7; color: #92400E; }
+.po-disclaimer-item.rejected { background: #FEE2E2; color: #991B1B; }
+.po-disclaimer-note {
+    font-size: 12px;
+    color: var(--text-secondary, #6B7280);
+    font-style: italic;
+}
+
+.status-defs-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px 24px;
+    margin-bottom: 10px;
+}
+.status-def {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+.status-def-label {
+    font-weight: 700;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    min-width: 100px;
+    text-align: center;
+}
+.status-def-label.critical { background: #FEE2E2; color: #991B1B; }
+.status-def-label.danger { background: #FFEDD5; color: #9A3412; }
+.status-def-label.warning { background: #FEF3C7; color: #92400E; }
+.status-def-label.info { background: #DBEAFE; color: #1E40AF; }
+.status-def-label.success { background: #DCFCE7; color: #166534; }
+.status-def-label.neutral { background: #F3F4F6; color: #4B5563; }
+.status-def-text {
+    color: var(--text-secondary, #6B7280);
+}
+.overview-disclaimer {
+    margin-bottom: 20px;
+}
+
+.po-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.po-summary-grid.po-3col {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.po-summary-card {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    padding: 24px 16px;
+    text-align: center;
+    box-shadow: var(--shadow);
+    border-top: 4px solid #ccc;
+}
+
+.po-summary-card.po-approved { border-top-color: #22C55E; background: linear-gradient(180deg, rgba(34,197,94,0.06) 0%, #fff 100%); }
+.po-summary-card.po-review { border-top-color: #F59E0B; background: linear-gradient(180deg, rgba(245,158,11,0.06) 0%, #fff 100%); }
+.po-summary-card.po-rejected { border-top-color: #DC2626; background: linear-gradient(180deg, rgba(220,38,38,0.06) 0%, #fff 100%); }
+
+.po-summary-value {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.po-summary-label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.po-file-date {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.po-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.po-badge.approved { background: #DCFCE7; color: #166534; border: 1px solid #22C55E; }
+.po-badge.review { background: #FEF3C7; color: #92400E; border: 1px solid #F59E0B; }
+.po-badge.rejected { background: #FEE2E2; color: #991B1B; border: 1px solid #DC2626; }
+
+.po-slicer-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px;
+    background: #fff;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.po-slicer-label {
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--dark-red);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+.po-slicer-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.po-slicer-chip {
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 2px solid #E5E7EB;
+    background: #F9FAFB;
+    color: #6B7280;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+.po-slicer-chip:hover {
+    border-color: #9CA3AF;
+    background: #F3F4F6;
+}
+.po-slicer-chip.active {
+    border-color: var(--orange);
+    background: #FFF7ED;
+    color: var(--dark-red);
+}
+.po-slicer-chip .chip-count {
+    margin-left: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    opacity: 0.7;
+}
+
+.po-reason {
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--text-secondary);
+    max-width: 350px;
+}
+
+/* Update Data Button */
+.btn-update-data {
+    background: #CFFF00;
+    color: #411517;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+.btn-update-data:hover { background: #b8e600; }
+.btn-update-data:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Ordering Tab */
+.po-summary-grid.po-4col {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.po-summary-card.ord-total { border-top-color: #FF5900; background: linear-gradient(180deg, rgba(255,89,0,0.06) 0%, #fff 100%); }
+.po-summary-card.ord-value { border-top-color: #3B82F6; background: linear-gradient(180deg, rgba(59,130,246,0.06) 0%, #fff 100%); }
+.po-summary-card.ord-urgent { border-top-color: #DC2626; background: linear-gradient(180deg, rgba(220,38,38,0.06) 0%, #fff 100%); }
+.po-summary-card.ord-stores { border-top-color: #CFFF00; background: linear-gradient(180deg, rgba(207,255,0,0.08) 0%, #fff 100%); }
+
+.urgency-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.urgency-badge.urgent { background: #FEE2E2; color: #991B1B; border: 1px solid #DC2626; }
+.urgency-badge.soon { background: #FEF3C7; color: #92400E; border: 1px solid #F59E0B; }
+.urgency-badge.normal { background: #DBEAFE; color: #1E40AF; border: 1px solid #3B82F6; }
+.urgency-badge.not-needed { background: #F3F4F6; color: #6B7280; border: 1px solid #9CA3AF; }
+
+/* -- Upload Page -- */
+.nav-upload {
+    color: var(--lime) !important;
+    font-weight: 700 !important;
+}
+
+.upload-login-container {
+    display: flex;
+    justify-content: center;
+    padding-top: 80px;
+}
+.upload-login-card {
+    max-width: 400px;
+    width: 100%;
+    padding: 32px;
+}
+.upload-login-form { margin-top: 16px; }
+.form-group { margin-bottom: 16px; }
+.upload-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border, #E5E7EB);
+    border-radius: 6px;
+    font-size: 14px;
+    box-sizing: border-box;
+    background: #fff;
+}
+.upload-input:focus {
+    outline: none;
+    border-color: var(--accent, #FF5900);
+    box-shadow: 0 0 0 2px rgba(255,89,0,0.15);
+}
+.btn-primary {
+    background: var(--accent, #FF5900);
+    color: #fff;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.2s;
+}
+.btn-primary:hover { background: #e04f00; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.upload-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 24px;
+}
+.upload-card-number-optional {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--dark-red, #411517);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px;
+    flex-shrink: 0;
+}
+.upload-optional-tag {
+    display: inline-block;
+    background: #F3F4F6;
+    color: #6B7280;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+.upload-card {
+    background: var(--bg-card, #fff);
+    border-radius: var(--radius, 10px);
+    padding: 24px;
+    box-shadow: var(--shadow, 0 1px 3px rgba(0,0,0,0.08));
+    border-top: 4px solid var(--border, #E5E7EB);
+    transition: border-color 0.3s;
+}
+.upload-card.uploaded { border-top-color: #22C55E; }
+.upload-card.error { border-top-color: #DC2626; }
+.upload-card.uploading { border-top-color: var(--accent, #FF5900); }
+
+.upload-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.upload-card-number {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--accent, #FF5900);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px;
+    flex-shrink: 0;
+}
+.upload-card-title { font-weight: 700; color: var(--text-primary, #1F2937); font-size: 15px; }
+.upload-card-hint { font-size: 12px; color: var(--text-secondary, #6B7280); margin-top: 2px; }
+
+.upload-dropzone {
+    border: 2px dashed var(--border, #D1D5DB);
+    border-radius: var(--radius, 10px);
+    padding: 32px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.upload-dropzone:hover { border-color: var(--accent, #FF5900); background: rgba(255,89,0,0.02); }
+.upload-dropzone.dragover { border-color: var(--accent, #FF5900); background: rgba(255,89,0,0.04); }
+.upload-dropzone-content p { margin: 8px 0 0; font-size: 13px; color: var(--text-secondary, #6B7280); }
+.upload-icon { font-size: 28px; }
+.upload-browse {
+    color: var(--accent, #FF5900);
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.upload-file-status {
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--text-secondary, #6B7280);
+    min-height: 20px;
+}
+.upload-file-status.has-file { color: #16A34A; font-weight: 600; }
+.upload-download-link {
+    color: var(--accent, #FF5900);
+    font-weight: 700;
+    text-decoration: none;
+    margin-left: 8px;
+    font-size: 12px;
+    border: 1px solid var(--accent, #FF5900);
+    padding: 2px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+.upload-download-link:hover {
+    background: var(--accent, #FF5900);
+    color: #fff;
+}
+.upload-error { color: #DC2626; font-size: 13px; margin-top: 8px; }
+
+.upload-actions {
+    text-align: center;
+    padding: 24px 0;
+}
+.btn-lg {
+    padding: 14px 40px;
+    font-size: 16px;
+}
+
+.upload-process-status {
+    margin-top: 12px;
+    font-size: 14px;
+    min-height: 22px;
+}
+.upload-process-status.processing { color: var(--accent, #FF5900); font-weight: 600; }
+.upload-process-status.success { color: #16A34A; font-weight: 700; }
+.upload-process-status.error { color: #DC2626; font-weight: 600; }
+
+@media (max-width: 768px) {
+    .po-summary-grid { grid-template-columns: 1fr; }
+    .po-summary-grid.po-3col { grid-template-columns: 1fr; }
+    .po-summary-grid.po-4col { grid-template-columns: repeat(2, 1fr); }
+    .upload-grid { grid-template-columns: repeat(2, 1fr); }
+}
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="navbar-brand">Stock <span>Efficiency</span> 26</div>
+        <div class="nav-links">
+            <a href="#" data-page="overview" class="active">Overview</a>
+            <a href="#" data-page="sku-detail">SKU Detail</a>
+            <a href="#" data-page="suppliers">Suppliers</a>
+            <a href="#" data-page="categories">Categories</a>
+            <a href="#" data-page="new-purchases">New Purchases</a>
+            <a href="#" data-page="locations">Locations</a>
+            <a href="#" data-page="po-assessment">PO Assessment</a>
+            <a href="#" data-page="ordering">Ordering</a>
+            <a href="#" data-page="data-upload" class="nav-upload">Upload Data</a>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+            <div class="file-info" id="file-info">No data loaded</div>
+        </div>
+    </nav>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <div class="filter-group">
+            <span class="filter-label">Status</span>
+            <select id="filter-status">
+                <option value="">All Statuses</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Supplier</span>
+            <select id="filter-supplier">
+                <option value="">All Suppliers</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Category</span>
+            <select id="filter-category">
+                <option value="">All Categories</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Location</span>
+            <select id="filter-location">
+                <option value="">All Locations</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Period</span>
+            <select id="filter-period">
+                <option value="30">Last 30 Days</option>
+                <option value="60">Last 60 Days</option>
+                <option value="90" selected>Last 90 Days</option>
+                <option value="180">Last 180 Days</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Search</span>
+            <input type="text" id="filter-search" placeholder="Search SKU or Name...">
+        </div>
+        <div class="filter-actions">
+            <button class="btn btn-reset" id="btn-reset-filters">Reset</button>
+            <button class="btn btn-export" id="btn-export-csv">CSV</button>
+            <button class="btn btn-export" id="btn-export-xlsx">Excel</button>
+        </div>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+
+        <!-- Overview Page -->
+        <section id="page-overview" class="page active">
+            <div class="po-disclaimer overview-disclaimer">
+                <div class="po-disclaimer-title">SKU Status Definitions</div>
+                <div class="status-defs-grid">
+                    <div class="status-def">
+                        <span class="status-def-label critical">Inactive</span>
+                        <span class="status-def-text">No stock, no sales, no purchases</span>
+                    </div>
+                    <div class="status-def">
+                        <span class="status-def-label critical">Dead Stock</span>
+                        <span class="status-def-text">Has stock but zero sales</span>
+                    </div>
+                    <div class="status-def">
+                        <span class="status-def-label critical">No Sales, Still Purchasing</span>
+                        <span class="status-def-text">Zero sales but recent purchases made</span>
+                    </div>
+                    <div class="status-def">
+                        <span class="status-def-label danger">Stockout</span>
+                        <span class="status-def-text">Zero stock but has sales demand</span>
+                    </div>
+                    <div class="status-def">
+                        <span class="status-def-label warning">Low Stock</span>
+                        <span class="status-def-text">Less than 14 days of stock remaining</span>
+                    </div>
+                    <div class="status-def">
+                        <span class="status-def-label warning">Over-Purchasing</span>
+                        <span class="status-def-text">Purchases exceed 2&times; sales quantity</span>
+                    </div>
+                    <div class="status-def">
+                        <span class="status-def-label warning">Overstocked</span>
+                        <span class="status-def-text">More than 90 days of stock on hand</span>
+                    </div>
+                    <div class="status-def">
+                        <span class="status-def-label info">New / Pipeline</span>
+                        <span class="status-def-text">Recently purchased, awaiting stock, no sales yet</span>
+                    </div>
+                    <div class="status-def">
+                        <span class="status-def-label success">Healthy</span>
+                        <span class="status-def-text">Turnover ratio &gt; 2 (sales exceed 2&times; stock)</span>
+                    </div>
+                    <div class="status-def">
+                        <span class="status-def-label neutral">Adequate</span>
+                        <span class="status-def-text">Default — does not match any other category</span>
+                    </div>
+                </div>
+                <div class="po-disclaimer-note">Avg Daily Sales = Sales Qty &divide; 30 days &nbsp;|&nbsp; Days of Stock = Stock Qty &divide; Avg Daily Sales &nbsp;|&nbsp; Turnover Ratio = Sales Qty &divide; Stock Qty</div>
+            </div>
+
+            <div class="kpi-grid">
+                <div class="kpi-card orange">
+                    <div class="kpi-label">Total SKUs</div>
+                    <div class="kpi-value" id="kpi-total-skus">0</div>
+                </div>
+                <div class="kpi-card blue">
+                    <div class="kpi-label">Total Inventory Value</div>
+                    <div class="kpi-value" id="kpi-total-inventory">0</div>
+                </div>
+                <div class="kpi-card red">
+                    <div class="kpi-label">Dead Stock Value</div>
+                    <div class="kpi-value" id="kpi-dead-stock">0</div>
+                </div>
+                <div class="kpi-card green">
+                    <div class="kpi-label">Healthy SKUs</div>
+                    <div class="kpi-value" id="kpi-healthy-pct">0%</div>
+                </div>
+                <div class="kpi-card red">
+                    <div class="kpi-label">At Risk</div>
+                    <div class="kpi-value" id="kpi-at-risk">0</div>
+                </div>
+                <div class="kpi-card orange">
+                    <div class="kpi-label">Stockouts</div>
+                    <div class="kpi-value" id="kpi-stockout">0</div>
+                </div>
+                <div class="kpi-card yellow">
+                    <div class="kpi-label">Low Stock</div>
+                    <div class="kpi-value" id="kpi-low-stock">0</div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-6">
+                    <div class="card">
+                        <div class="card-title">Status Distribution</div>
+                        <div class="chart-container">
+                            <canvas id="chart-status-dist"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="card">
+                        <div class="card-title">Top 10 Worst Performing SKUs</div>
+                        <div id="tbl-top-worst"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Inventory Value by Status</div>
+                <div id="tbl-status-summary"></div>
+            </div>
+        </section>
+
+        <!-- SKU Detail Page -->
+        <section id="page-sku-detail" class="page">
+            <div class="page-header">
+                <h2>SKU Detail</h2>
+                <div class="sku-count-info" id="sku-count-info">0 SKUs</div>
+            </div>
+            <div class="card">
+                <div id="tbl-sku-detail"></div>
+            </div>
+        </section>
+
+        <!-- Suppliers Page -->
+        <section id="page-suppliers" class="page">
+            <div class="page-header">
+                <h2>Supplier Analysis</h2>
+            </div>
+            <div class="card">
+                <div class="card-title">Supplier Health Scores</div>
+                <div class="chart-container">
+                    <canvas id="chart-supplier-health"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">Supplier Summary</div>
+                <div id="tbl-suppliers"></div>
+            </div>
+        </section>
+
+        <!-- Categories Page -->
+        <section id="page-categories" class="page">
+            <div class="page-header">
+                <h2>Category Analysis</h2>
+            </div>
+            <div class="card">
+                <div class="card-title">Status Distribution by Category</div>
+                <div class="chart-container">
+                    <canvas id="chart-category-stacked"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">Category Summary</div>
+                <div id="tbl-categories"></div>
+            </div>
+        </section>
+
+        <!-- New Purchases Page -->
+        <section id="page-new-purchases" class="page">
+            <div class="page-header">
+                <h2>New Purchases</h2>
+            </div>
+
+            <div class="highlight-cards">
+                <div class="highlight-card lime">
+                    <div class="value" id="new-sku-count">0</div>
+                    <div class="label">Brand New SKUs</div>
+                </div>
+                <div class="highlight-card blue">
+                    <div class="value" id="recent-purchase-count">0</div>
+                    <div class="label">Recently Purchased</div>
+                </div>
+            </div>
+
+            <div class="new-purchase-section">
+                <div class="card-title">Brand New SKUs <span class="count" style="background:var(--lime);color:var(--dark-red)">First-time purchases</span></div>
+                <div id="tbl-new-skus"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Recently Purchased (Last 30 Days)</div>
+                <div id="tbl-recent-purchases"></div>
+            </div>
+        </section>
+
+        <!-- Locations Page -->
+        <section id="page-locations" class="page">
+            <div class="page-header">
+                <h2>Location Analysis</h2>
+            </div>
+            <div class="card">
+                <div class="card-title">Stock Value by Location</div>
+                <div class="chart-container">
+                    <canvas id="chart-location-bar"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">Location Summary</div>
+                <div id="tbl-locations"></div>
+            </div>
+        </section>
+
+        <!-- PO Assessment Page -->
+        <section id="page-po-assessment" class="page">
+            <div class="page-header">
+                <h2>PO Assessment</h2>
+                <div style="display:flex;align-items:center;gap:12px">
+                    <div class="po-file-date" id="po-file-date"></div>
+                    <button class="btn btn-export" id="btn-copy-po">Copy Table</button>
+                    <button class="btn btn-export" id="btn-export-po">Export Excel</button>
+                </div>
+            </div>
+
+            <div class="po-disclaimer">
+                <div class="po-disclaimer-title">Assessment Criteria</div>
+                <div class="po-disclaimer-items">
+                    <span class="po-disclaimer-item approved">Approved — Total stock coverage after PO &le; 45 days</span>
+                    <span class="po-disclaimer-item review">To Be Reviewed — Total coverage &gt; 45 and &le; 60 days</span>
+                    <span class="po-disclaimer-item rejected">Rejected — Total coverage &gt; 60 days or no sales history</span>
+                </div>
+                <div class="po-disclaimer-note">Total coverage = (Current Stock + PO Qty) &divide; Avg Daily Sales</div>
+            </div>
+
+            <div class="po-summary-grid po-3col">
+                <div class="po-summary-card po-approved">
+                    <div class="po-summary-value" id="po-approved-count">0</div>
+                    <div class="po-summary-label">Approved</div>
+                </div>
+                <div class="po-summary-card po-review">
+                    <div class="po-summary-value" id="po-review-count">0</div>
+                    <div class="po-summary-label">To Be Reviewed</div>
+                </div>
+                <div class="po-summary-card po-rejected">
+                    <div class="po-summary-value" id="po-rejected-count">0</div>
+                    <div class="po-summary-label">Rejected</div>
+                </div>
+            </div>
+
+            <div class="po-slicer-bar" id="po-slicer-bar">
+                <span class="po-slicer-label">PO Status</span>
+                <div class="po-slicer-chips" id="po-status-chips"></div>
+            </div>
+
+            <div class="row">
+                <div class="col-4">
+                    <div class="card">
+                        <div class="card-title">Assessment Breakdown</div>
+                        <div class="chart-container" style="height:280px">
+                            <canvas id="chart-po-summary"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-8">
+                    <div class="card">
+                        <div class="card-title">PO Line Details <span class="count" id="po-total-badge">0 SKUs</span></div>
+                        <div id="tbl-po-assessment"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Ordering Page -->
+        <section id="page-ordering" class="page">
+            <div class="page-header">
+                <h2>Order Recommendations</h2>
+                <div style="display:flex;align-items:center;gap:12px">
+                    <button class="btn btn-export" id="btn-export-ordering">Export Excel</button>
+                </div>
+            </div>
+
+            <div class="po-disclaimer">
+                <div class="po-disclaimer-title">Urgency Definitions</div>
+                <div class="po-disclaimer-items">
+                    <span class="po-disclaimer-item rejected">Urgent &mdash; Less than 7 days of stock remaining</span>
+                    <span class="po-disclaimer-item review">Soon &mdash; 7 to 14 days of stock remaining</span>
+                    <span class="po-disclaimer-item approved">Normal &mdash; 14 to 30 days of stock remaining</span>
+                </div>
+                <div class="po-disclaimer-note">Suggested Order Qty = (Avg Daily Sales &times; 30) &minus; Current Stock &nbsp;|&nbsp; Order Value = Suggested Qty &times; Cost Price &nbsp;|&nbsp; Avg Daily Sales = Sales Qty &divide; 30 days</div>
+            </div>
+
+            <div class="po-summary-grid po-4col">
+                <div class="po-summary-card ord-total">
+                    <div class="po-summary-value" id="ord-total-skus">0</div>
+                    <div class="po-summary-label">SKUs to Order</div>
+                </div>
+                <div class="po-summary-card ord-value">
+                    <div class="po-summary-value" id="ord-total-value">0</div>
+                    <div class="po-summary-label">Total Order Value</div>
+                </div>
+                <div class="po-summary-card ord-urgent">
+                    <div class="po-summary-value" id="ord-urgent-count">0</div>
+                    <div class="po-summary-label">Urgent</div>
+                </div>
+                <div class="po-summary-card ord-stores">
+                    <div class="po-summary-value" id="ord-stores-count">0</div>
+                    <div class="po-summary-label">Stores Needing Orders</div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-6">
+                    <div class="card">
+                        <div class="card-title">Order Value by Store</div>
+                        <div class="chart-container">
+                            <canvas id="chart-ordering-store"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="card">
+                        <div class="card-title">Urgency Distribution</div>
+                        <div class="chart-container" style="height:280px">
+                            <canvas id="chart-ordering-urgency"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Order Details <span class="count" id="ord-total-badge">0 SKUs</span></div>
+                <div id="tbl-ordering"></div>
+            </div>
+        </section>
+
+        <!-- Upload Data Page -->
+        <section id="page-data-upload" class="page">
+            <!-- Login Form -->
+            <div id="upload-login" class="upload-login-container">
+                <div class="card upload-login-card">
+                    <div class="card-title">Upload Data Access</div>
+                    <div class="upload-login-form">
+                        <div class="form-group">
+                            <label class="filter-label">Username</label>
+                            <input type="text" id="upload-username" class="upload-input" autocomplete="username">
+                        </div>
+                        <div class="form-group">
+                            <label class="filter-label">Password</label>
+                            <input type="password" id="upload-password" class="upload-input" autocomplete="current-password">
+                        </div>
+                        <div id="upload-login-error" class="upload-error"></div>
+                        <button class="btn btn-primary" id="btn-upload-login">Sign In</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Interface -->
+            <div id="upload-interface" style="display:none">
+                <div class="page-header">
+                    <h2>Upload T-Mart Data</h2>
+                    <div style="display:flex;align-items:center;gap:12px">
+                        <span id="upload-user-info" class="file-info"></span>
+                        <button class="btn btn-reset" id="btn-upload-logout">Sign Out</button>
+                    </div>
+                </div>
+
+                <div class="upload-grid">
+                    <div class="upload-card" id="upload-card-soh" data-type="soh">
+                        <div class="upload-card-header">
+                            <div class="upload-card-number">1</div>
+                            <div>
+                                <div class="upload-card-title">Stock on Hand</div>
+                                <div class="upload-card-hint">SOH - tmart.xlsx</div>
+                            </div>
+                        </div>
+                        <div class="upload-dropzone" id="dropzone-soh">
+                            <div class="upload-dropzone-content">
+                                <div class="upload-icon">&#128196;</div>
+                                <p>Drag & drop or <label for="file-soh" class="upload-browse">browse</label></p>
+                                <input type="file" id="file-soh" accept=".xlsx,.xls,.csv" hidden>
+                            </div>
+                        </div>
+                        <div class="upload-file-status" id="status-soh"></div>
+                    </div>
+
+                    <div class="upload-card" id="upload-card-sales" data-type="sales">
+                        <div class="upload-card-header">
+                            <div class="upload-card-number">2</div>
+                            <div>
+                                <div class="upload-card-title">Sales Data</div>
+                                <div class="upload-card-hint">SKU_Sales.xlsx</div>
+                            </div>
+                        </div>
+                        <div class="upload-dropzone" id="dropzone-sales">
+                            <div class="upload-dropzone-content">
+                                <div class="upload-icon">&#128196;</div>
+                                <p>Drag & drop or <label for="file-sales" class="upload-browse">browse</label></p>
+                                <input type="file" id="file-sales" accept=".xlsx,.xls,.csv" hidden>
+                            </div>
+                        </div>
+                        <div class="upload-file-status" id="status-sales"></div>
+                    </div>
+
+                    <div class="upload-card" id="upload-card-po" data-type="po">
+                        <div class="upload-card-header">
+                            <div class="upload-card-number">3</div>
+                            <div>
+                                <div class="upload-card-title">POs Under Creation</div>
+                                <div class="upload-card-hint">POs under creation.xlsx</div>
+                            </div>
+                        </div>
+                        <div class="upload-dropzone" id="dropzone-po">
+                            <div class="upload-dropzone-content">
+                                <div class="upload-icon">&#128196;</div>
+                                <p>Drag & drop or <label for="file-po" class="upload-browse">browse</label></p>
+                                <input type="file" id="file-po" accept=".xlsx,.xls,.csv" hidden>
+                            </div>
+                        </div>
+                        <div class="upload-file-status" id="status-po"></div>
+                    </div>
+                </div>
+
+                <div class="upload-actions">
+                    <button class="btn btn-primary btn-lg" id="btn-process-data" disabled>Process & Update Dashboard</button>
+                    <pre id="debug-log" style="margin-top:16px;padding:12px;background:#1a1a2e;color:#0f0;font-size:12px;border-radius:8px;max-height:200px;overflow:auto;text-align:left;white-space:pre-wrap"></pre>
+                    <div id="process-status" class="upload-process-status"></div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- External CDN scripts -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <!-- Inline JS (all app scripts combined) -->
+    <script>
+// Contents of config.js
+const CONFIG = {
+    STORAGE_KEY: 'stock_dashboard_data',
+    STORAGE_PO_KEY: 'stock_dashboard_po',
+    DEFAULT_PERIOD: 30,
+    PERIOD_OPTIONS: [30],
+};
+
+// Contents of engine.js
+/**
+ * Engine.js — Client-side assessment and aggregation engine
+ * Ported from Apps Script (.gs) files to run entirely in the browser.
+ * All data persisted in localStorage.
+ */
+
+const Engine = (() => {
+
+    // =========================================================================
+    // From Loader.gs — Column mapping and normalization
+    // =========================================================================
+
+    const COLUMN_MAP = {
+        sku: ['sku', 'item code', 'item_code', 'product code', 'product_code', 'barcode', 'article', 'sku_id'],
+        name: ['name', 'item name', 'item_name', 'product name', 'product_name', 'description', 'item description', 'item name (english)'],
+        category: ['category', 'product category', 'group', 'department', 'class', 'category name', 'parent_category', 'parent category'],
+        sub_category: ['sub_category', 'sub-category', 'sub-category name', 'subcategory'],
+        supplier: ['supplier', 'vendor', 'supplier name', 'vendor name', 'supplier_name'],
+        stock_qty: ['stock qty', 'stock_qty', 'on hand', 'on_hand', 'quantity on hand', 'qty on hand', 'soh', 'stock', 'stock closing quantity', 'stock_on_hand', 'stock on hand'],
+        sales_qty: ['sales qty', 'sales_qty', 'sold qty', 'units sold', 'qty sold', 'sales', 'grand total', 'sales_total', 'fulfilled_quantity', 'fulfilled quantity', 'fulfilled_qty'],
+        purchase_qty: ['purchase qty', 'purchase_qty', 'ordered qty', 'qty purchased', 'qty ordered', 'po qty', 'purchases'],
+        location: ['location', 'warehouse', 'store', 'branch', 'site', 'warehouse name', 'warehouse_name', 'store_name', 'store name'],
+        cost_price: ['cost price', 'cost_price', 'unit cost', 'buying price', 'cost', 'avg cost', 'stock closing wac (lc)', 'unit_cost'],
+        selling_price: ['selling price', 'selling_price', 'retail price', 'unit price', 'price', 'srp', 'item price (avg.)', 'paid_unit_price', 'paid unit price', 'listed_unit_price'],
+        stock_value: ['stock_value', 'stock value', 'stock closing value (lc)', 'value'],
+        last_sale_date: ['last sale date', 'last_sale_date', 'last sold', 'last sale'],
+        last_purchase_date: ['last purchase date', 'last_purchase_date', 'last ordered', 'last po date', 'last purchase'],
+        sales_orders: ['sales_orders', 'ordered_quantity', 'ordered quantity'],
+        sales_returns: ['sales_returns', 'returned_quantity', 'returned quantity'],
+        sales_revenue: ['sales_revenue', 'total_amount', 'total amount'],
+        sales_cogs: ['sales_cogs', 'total_cogs', 'total cogs'],
+        reorder_point: ['reorder point', 'reorder_point', 'min stock', 'safety stock', 'min qty', 'rop'],
+        warehouse_type: ['warehouse_type', 'type'],
+        country: ['country', 'country code'],
+        warehouse_count: ['warehouse_count'],
+        sales_orders: ['sales_orders'],
+        sales_returns: ['sales_returns'],
+        sales_revenue: ['sales_revenue'],
+        sales_cogs: ['sales_cogs']
+    };
+
+    const NUMERIC_COLUMNS = [
+        'stock_qty', 'sales_qty', 'purchase_qty', 'cost_price', 'selling_price',
+        'reorder_point', 'stock_value', 'warehouse_count',
+        'sales_orders', 'sales_returns', 'sales_revenue', 'sales_cogs'
+    ];
+
+    const DATE_COLUMNS = ['last_sale_date', 'last_purchase_date'];
+
+    const STRING_DEFAULTS = {
+        name: 'Unknown',
+        category: 'Uncategorized',
+        supplier: 'Unknown',
+        location: 'Default'
+    };
+
+    const AT_RISK_STATUSES = [
+        'CRITICAL - Dead Stock',
+        'CRITICAL - No Sales, Still Purchasing',
+        'HIGH RISK - Overstocked',
+        'HIGH RISK - Overstocked & Over-Purchasing'
+    ];
+
+    // PO Column mapping rules (from POAssessment.gs)
+    const PO_COLUMN_RULES = [
+        { key: 'sku', candidates: ['item sku', 'sku_id', 'sku'] },
+        { key: 'name', candidates: ['item name (english)', 'product_name', 'item name', 'product name'] },
+        { key: 'po_qty', candidates: ['ordered_qty', 'ordered quantity', 'total ordered quantity', 'ordered qty'] },
+        { key: 'delivered_qty', candidates: ['received_qty', 'total delivered quantity', 'delivered quantity'] },
+        { key: 'po_number', candidates: ['po_number', 'po number'] },
+        { key: 'po_supplier', candidates: ['supplier_name', 'supplier name'] },
+        { key: 'store', candidates: ['store_name', 'store name'] },
+        { key: 'unit_cost', candidates: ['discounted_unit_cost', 'discounted cost per unit', 'unit_cost', 'cost per unit'] },
+        { key: 'state', candidates: ['po_status', 'state'] }
+    ];
+
+    // =========================================================================
+    // From Utils.gs — Helper functions
+    // =========================================================================
+
+    function round2(n, decimals) {
+        if (n === null || n === undefined || isNaN(n)) return 0;
+        if (n === Infinity || n === -Infinity) return 9999;
+        if (decimals === undefined) decimals = 2;
+        var factor = Math.pow(10, decimals);
+        return Math.round(n * factor) / factor;
+    }
+
+    function formatDate(date) {
+        if (!date || !(date instanceof Date) || isNaN(date.getTime())) return '';
+        var y = date.getFullYear();
+        var m = ('0' + (date.getMonth() + 1)).slice(-2);
+        var d = ('0' + date.getDate()).slice(-2);
+        return y + '-' + m + '-' + d;
+    }
+
+    function daysBetween(date1, date2) {
+        if (!date1 || !date2) return 0;
+        if (!(date1 instanceof Date)) date1 = new Date(date1);
+        if (!(date2 instanceof Date)) date2 = new Date(date2);
+        if (isNaN(date1.getTime()) || isNaN(date2.getTime())) return 0;
+        var msPerDay = 86400000;
+        return Math.round(Math.abs(date2.getTime() - date1.getTime()) / msPerDay);
+    }
+
+    function formatInt(n) {
+        return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    function formatNum(n) {
+        return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    function pickColumnsRow(row, cols) {
+        var obj = {};
+        for (var j = 0; j < cols.length; j++) {
+            var c = cols[j];
+            if (row[c] !== undefined) {
+                obj[c] = row[c];
+            }
+        }
+        return obj;
+    }
+
+    function pickColumns(data, cols) {
+        var result = [];
+        for (var i = 0; i < data.length; i++) {
+            result.push(pickColumnsRow(data[i], cols));
+        }
+        return result;
+    }
+
+    // =========================================================================
+    // From Loader.gs — normalizeColumns / coerceRow
+    // =========================================================================
+
+    function normalizeColumns(rawHeaders) {
+        var mapped = [];
+        for (var i = 0; i < rawHeaders.length; i++) {
+            var raw = String(rawHeaders[i]).trim().toLowerCase().replace(/\s+/g, ' ');
+            var canonical = null;
+
+            for (var key in COLUMN_MAP) {
+                var aliases = COLUMN_MAP[key];
+                for (var j = 0; j < aliases.length; j++) {
+                    if (raw === aliases[j]) {
+                        canonical = key;
+                        break;
+                    }
+                }
+                if (canonical) break;
+            }
+
+            mapped.push({
+                index: i,
+                canonical: canonical,
+                raw: rawHeaders[i]
+            });
+        }
+        return mapped;
+    }
+
+    function coerceRow(rowValues, headers) {
+        var obj = {};
+
+        for (var i = 0; i < headers.length; i++) {
+            var h = headers[i];
+            if (!h.canonical) continue;
+            var val = i < rowValues.length ? rowValues[i] : null;
+            obj[h.canonical] = val;
+        }
+
+        // Coerce numeric fields
+        for (var n = 0; n < NUMERIC_COLUMNS.length; n++) {
+            var col = NUMERIC_COLUMNS[n];
+            if (obj[col] !== undefined && obj[col] !== null) {
+                var num = parseFloat(obj[col]);
+                obj[col] = isNaN(num) ? 0 : num;
+            } else {
+                if (col !== 'stock_value') {
+                    obj[col] = 0;
+                }
+            }
+        }
+
+        // Coerce date fields
+        for (var d = 0; d < DATE_COLUMNS.length; d++) {
+            var dcol = DATE_COLUMNS[d];
+            if (obj[dcol] !== undefined && obj[dcol] !== null && obj[dcol] !== '') {
+                var dateVal = obj[dcol];
+                if (dateVal instanceof Date && !isNaN(dateVal.getTime())) {
+                    obj[dcol] = dateVal;
+                } else {
+                    var parsed = new Date(dateVal);
+                    obj[dcol] = isNaN(parsed.getTime()) ? null : parsed;
+                }
+            } else {
+                obj[dcol] = null;
+            }
+        }
+
+        // Fill string defaults
+        for (var skey in STRING_DEFAULTS) {
+            if (!obj[skey] || String(obj[skey]).trim() === '') {
+                obj[skey] = STRING_DEFAULTS[skey];
+            } else {
+                obj[skey] = String(obj[skey]).trim();
+            }
+        }
+
+        // Ensure SKU exists
+        if (!obj.sku || String(obj.sku).trim() === '') {
+            return null;
+        }
+        obj.sku = String(obj.sku).trim();
+
+        return obj;
+    }
+
+    // =========================================================================
+    // From Assessor.gs — assessSku / assessAll
+    // =========================================================================
+
+    function assessSku(row, analysisDays, referenceDate) {
+        var stock = parseFloat(row.stock_qty || 0) || 0;
+        var sales = parseFloat(row.sales_qty || 0) || 0;
+        var purchases = parseFloat(row.purchase_qty || 0) || 0;
+        var lastPurchase = row.last_purchase_date;
+
+        var avgDailySales = analysisDays > 0 ? sales / analysisDays : 0;
+        var daysOfStock = avgDailySales > 0 ? stock / avgDailySales : Infinity;
+        var turnover = stock > 0 ? sales / stock : 0;
+
+        var purchasedRecently = false;
+        if (lastPurchase && lastPurchase instanceof Date && !isNaN(lastPurchase.getTime())) {
+            var daysSincePurchase = daysBetween(lastPurchase, referenceDate);
+            purchasedRecently = daysSincePurchase <= 30;
+        }
+
+        // 1. INACTIVE
+        if (stock === 0 && sales === 0 && purchases === 0) {
+            return ['INACTIVE', 0];
+        }
+
+        // 2. CRITICAL - No Sales, Still Purchasing
+        if (sales === 0 && purchases > 0 && purchasedRecently) {
+            return ['CRITICAL - No Sales, Still Purchasing', 10];
+        }
+
+        // 3. CRITICAL - Dead Stock
+        if (stock > 0 && sales === 0) {
+            return ['CRITICAL - Dead Stock', 9];
+        }
+
+        // 4. STOCKOUT - Selling but No Stock
+        if (stock === 0 && sales > 0) {
+            return ['STOCKOUT - Selling but No Stock', 8];
+        }
+
+        // 5. NEW/PIPELINE - Purchased, Awaiting Stock
+        if (purchases > 0 && stock === 0 && sales === 0 && purchasedRecently) {
+            return ['NEW/PIPELINE - Purchased, Awaiting Stock', 1];
+        }
+
+        // 6. LOW STOCK - May Stockout Soon
+        if (stock > 0 && avgDailySales > 0 && stock < (avgDailySales * 14)) {
+            return ['LOW STOCK - May Stockout Soon', 7];
+        }
+
+        // Compute flags for overstocked/over-purchasing
+        var isOverstocked = avgDailySales > 0 && stock > (avgDailySales * 90);
+        var isOverPurchasing = sales > 0 && purchases > (2 * sales);
+
+        // 7. HIGH RISK - Overstocked & Over-Purchasing
+        if (isOverstocked && isOverPurchasing) {
+            return ['HIGH RISK - Overstocked & Over-Purchasing', 5];
+        }
+
+        // 8. HIGH RISK - Overstocked
+        if (isOverstocked) {
+            return ['HIGH RISK - Overstocked', 4];
+        }
+
+        // 9. WARNING - Over-Purchasing
+        if (isOverPurchasing) {
+            return ['WARNING - Over-Purchasing', 6];
+        }
+
+        // 10. HEALTHY - Good Turnover
+        if (turnover > 2) {
+            return ['HEALTHY - Good Turnover', 0];
+        }
+
+        // 11. MEDIUM - Adequate Stock (default)
+        return ['MEDIUM - Adequate Stock', 2];
+    }
+
+    function assessAll(data, analysisDays) {
+        if (!data || data.length === 0) return [];
+        analysisDays = 30;
+
+        // Determine reference date: max of now and all date columns
+        var referenceDate = new Date();
+
+        for (var i = 0; i < data.length; i++) {
+            var row = data[i];
+            if (row.last_sale_date && row.last_sale_date instanceof Date && !isNaN(row.last_sale_date.getTime())) {
+                if (row.last_sale_date > referenceDate) {
+                    referenceDate = new Date(row.last_sale_date.getTime());
+                }
+            }
+            if (row.last_purchase_date && row.last_purchase_date instanceof Date && !isNaN(row.last_purchase_date.getTime())) {
+                if (row.last_purchase_date > referenceDate) {
+                    referenceDate = new Date(row.last_purchase_date.getTime());
+                }
+            }
+        }
+
+        // Assess each row
+        for (var j = 0; j < data.length; j++) {
+            var r = data[j];
+            var result = assessSku(r, analysisDays, referenceDate);
+            r.assessment = result[0];
+            r.severity = result[1];
+
+            // Calculated fields
+            var avgDaily = analysisDays > 0 ? (r.sales_qty || 0) / analysisDays : 0;
+            r.avg_daily_sales = round2(avgDaily);
+
+            r.days_of_stock = avgDaily > 0 ? round2((r.stock_qty || 0) / avgDaily, 1) : 9999;
+
+            r.turnover_ratio = (r.stock_qty || 0) > 0 ? round2((r.sales_qty || 0) / r.stock_qty) : 0;
+
+            // Stock value: use existing if available, otherwise calculate
+            if (!r.stock_value || r.stock_value === 0) {
+                r.stock_value = round2((r.stock_qty || 0) * (r.cost_price || 0));
+            } else {
+                r.stock_value = round2(r.stock_value);
+            }
+
+            // Potential revenue
+            r.potential_revenue = round2((r.stock_qty || 0) * (r.selling_price || 0));
+
+            // Dead stock value
+            r.dead_stock_value = (r.assessment.indexOf('Dead Stock') !== -1) ? r.stock_value : 0;
+
+            // Days since last sale
+            if (r.last_sale_date && r.last_sale_date instanceof Date && !isNaN(r.last_sale_date.getTime())) {
+                r.days_since_last_sale = daysBetween(r.last_sale_date, referenceDate);
+            } else {
+                r.days_since_last_sale = -1;
+            }
+
+            // Days since last purchase
+            if (r.last_purchase_date && r.last_purchase_date instanceof Date && !isNaN(r.last_purchase_date.getTime())) {
+                r.days_since_last_purchase = daysBetween(r.last_purchase_date, referenceDate);
+            } else {
+                r.days_since_last_purchase = -1;
+            }
+
+            // is_new_sku
+            r.is_new_sku = false;
+
+            // recently_purchased — last purchase within 60 days
+            if (r.last_purchase_date && r.last_purchase_date instanceof Date && !isNaN(r.last_purchase_date.getTime())) {
+                r.recently_purchased = daysBetween(r.last_purchase_date, referenceDate) <= 60;
+            } else {
+                r.recently_purchased = false;
+            }
+
+            // Format date fields for JSON output
+            if (r.last_sale_date instanceof Date) {
+                r.last_sale_date = formatDate(r.last_sale_date);
+            } else {
+                r.last_sale_date = '';
+            }
+            if (r.last_purchase_date instanceof Date) {
+                r.last_purchase_date = formatDate(r.last_purchase_date);
+            } else {
+                r.last_purchase_date = '';
+            }
+        }
+
+        return data;
+    }
+
+    // =========================================================================
+    // From Aggregator.gs
+    // =========================================================================
+
+    function aggregateOverview(data) {
+        if (!data || data.length === 0) {
+            return {
+                total_skus: 0,
+                total_stock_value: 0,
+                dead_stock_value: 0,
+                healthy_pct: 0,
+                at_risk_count: 0,
+                stockout_count: 0,
+                low_stock_count: 0,
+                new_sku_count: 0,
+                recently_purchased_count: 0,
+                status_distribution: {},
+                status_summary: []
+            };
+        }
+
+        var totalStockValue = 0;
+        var deadStockValue = 0;
+        var healthyCount = 0;
+        var activeCount = 0;
+        var atRiskCount = 0;
+        var stockoutCount = 0;
+        var lowStockCount = 0;
+        var newSkuCount = 0;
+        var recentPurchasedCount = 0;
+        var statusDist = {};
+
+        for (var i = 0; i < data.length; i++) {
+            var row = data[i];
+            totalStockValue += (row.stock_value || 0);
+            deadStockValue += (row.dead_stock_value || 0);
+
+            var assess = row.assessment || '';
+
+            if (assess !== 'INACTIVE') activeCount++;
+            if (assess === 'HEALTHY - Good Turnover') healthyCount++;
+            if (AT_RISK_STATUSES.indexOf(assess) !== -1) atRiskCount++;
+            if (assess === 'STOCKOUT - Selling but No Stock') stockoutCount++;
+            if (assess === 'LOW STOCK - May Stockout Soon') lowStockCount++;
+            if (row.is_new_sku) newSkuCount++;
+            if (row.recently_purchased) recentPurchasedCount++;
+
+            statusDist[assess] = (statusDist[assess] || 0) + 1;
+        }
+
+        if (activeCount === 0) activeCount = 1;
+
+        return {
+            total_skus: data.length,
+            total_stock_value: round2(totalStockValue),
+            dead_stock_value: round2(deadStockValue),
+            healthy_pct: round2(healthyCount / activeCount * 100, 1),
+            at_risk_count: atRiskCount,
+            stockout_count: stockoutCount,
+            low_stock_count: lowStockCount,
+            new_sku_count: newSkuCount,
+            recently_purchased_count: recentPurchasedCount,
+            status_distribution: statusDist,
+            status_summary: buildStatusSummary(data, totalStockValue)
+        };
+    }
+
+    function buildStatusSummary(data, totalValue) {
+        if (totalValue === 0) totalValue = 1;
+
+        var groups = {};
+        for (var i = 0; i < data.length; i++) {
+            var row = data[i];
+            var status = row.assessment || '';
+            if (!groups[status]) {
+                groups[status] = { status: status, sku_count: 0, stock_qty: 0, stock_value: 0 };
+            }
+            groups[status].sku_count++;
+            groups[status].stock_qty += (row.stock_qty || 0);
+            groups[status].stock_value += (row.stock_value || 0);
+        }
+
+        var result = [];
+        for (var s in groups) {
+            var g = groups[s];
+            g.stock_value = round2(g.stock_value);
+            g.stock_qty = Math.round(g.stock_qty);
+            g.pct_of_total = round2(g.stock_value / totalValue * 100, 1);
+            result.push(g);
+        }
+
+        result.sort(function(a, b) { return b.stock_value - a.stock_value; });
+        return result;
+    }
+
+    function aggregateBySupplier(data) {
+        if (!data || data.length === 0) return [];
+
+        var groups = {};
+        for (var i = 0; i < data.length; i++) {
+            var row = data[i];
+            var key = row.supplier || 'Unknown';
+            if (!groups[key]) {
+                groups[key] = [];
+            }
+            groups[key].push(row);
+        }
+
+        var result = [];
+        for (var supplier in groups) {
+            var g = groups[supplier];
+            var activeCount = 0;
+            var healthyCount = 0;
+            var riskCount = 0;
+            var deadStockVal = 0;
+            var stockVal = 0;
+            var turnoverSum = 0;
+            var statusDist = {};
+
+            for (var j = 0; j < g.length; j++) {
+                var r = g[j];
+                var assess = r.assessment || '';
+                if (assess !== 'INACTIVE') activeCount++;
+                if (assess === 'HEALTHY - Good Turnover') healthyCount++;
+                if (AT_RISK_STATUSES.indexOf(assess) !== -1) riskCount++;
+                deadStockVal += (r.dead_stock_value || 0);
+                stockVal += (r.stock_value || 0);
+                turnoverSum += (r.turnover_ratio || 0);
+                statusDist[assess] = (statusDist[assess] || 0) + 1;
+            }
+
+            if (activeCount === 0) activeCount = 1;
+            var healthyPct = round2(healthyCount / activeCount * 100, 1);
+            var riskPct = round2(riskCount / activeCount * 100, 1);
+            var avgTurn = round2(turnoverSum / g.length);
+
+            var healthScore = round2(
+                healthyPct * 0.4 +
+                (100 - riskPct) * 0.3 +
+                Math.min(avgTurn * 10, 100) * 0.3,
+                1
+            );
+
+            result.push({
+                supplier: supplier,
+                total_skus: g.length,
+                healthy_count: healthyCount,
+                healthy_pct: healthyPct,
+                at_risk_count: riskCount,
+                dead_stock_value: round2(deadStockVal),
+                stock_value: round2(stockVal),
+                avg_turnover: avgTurn,
+                health_score: healthScore,
+                status_distribution: statusDist
+            });
+        }
+
+        result.sort(function(a, b) { return b.health_score - a.health_score; });
+        return result;
+    }
+
+    function aggregateByCategory(data) {
+        if (!data || data.length === 0) return [];
+
+        var groups = {};
+        for (var i = 0; i < data.length; i++) {
+            var row = data[i];
+            var key = row.category || 'Uncategorized';
+            if (!groups[key]) {
+                groups[key] = [];
+            }
+            groups[key].push(row);
+        }
+
+        var result = [];
+        for (var cat in groups) {
+            var g = groups[cat];
+            var activeCount = 0;
+            var healthyCount = 0;
+            var riskCount = 0;
+            var deadStockVal = 0;
+            var stockVal = 0;
+            var turnoverSum = 0;
+            var statusDist = {};
+
+            for (var j = 0; j < g.length; j++) {
+                var r = g[j];
+                var assess = r.assessment || '';
+                if (assess !== 'INACTIVE') activeCount++;
+                if (assess === 'HEALTHY - Good Turnover') healthyCount++;
+                if (AT_RISK_STATUSES.indexOf(assess) !== -1) riskCount++;
+                deadStockVal += (r.dead_stock_value || 0);
+                stockVal += (r.stock_value || 0);
+                turnoverSum += (r.turnover_ratio || 0);
+                statusDist[assess] = (statusDist[assess] || 0) + 1;
+            }
+
+            if (activeCount === 0) activeCount = 1;
+
+            result.push({
+                category: cat,
+                total_skus: g.length,
+                healthy_count: healthyCount,
+                healthy_pct: round2(healthyCount / activeCount * 100, 1),
+                at_risk_count: riskCount,
+                dead_stock_value: round2(deadStockVal),
+                stock_value: round2(stockVal),
+                avg_turnover: round2(turnoverSum / g.length),
+                status_distribution: statusDist
+            });
+        }
+
+        result.sort(function(a, b) { return b.healthy_pct - a.healthy_pct; });
+        return result;
+    }
+
+    function aggregateByLocation(data) {
+        if (!data || data.length === 0) return [];
+
+        var groups = {};
+        for (var i = 0; i < data.length; i++) {
+            var row = data[i];
+            var key = row.location || 'Default';
+            if (!groups[key]) {
+                groups[key] = [];
+            }
+            groups[key].push(row);
+        }
+
+        var result = [];
+        for (var loc in groups) {
+            var g = groups[loc];
+            var stockVal = 0;
+            var statusDist = {};
+
+            for (var j = 0; j < g.length; j++) {
+                stockVal += (g[j].stock_value || 0);
+                var assess = g[j].assessment || '';
+                statusDist[assess] = (statusDist[assess] || 0) + 1;
+            }
+
+            result.push({
+                location: loc,
+                total_skus: g.length,
+                stock_value: round2(stockVal),
+                status_distribution: statusDist
+            });
+        }
+
+        result.sort(function(a, b) { return b.stock_value - a.stock_value; });
+        return result;
+    }
+
+    function getTopWorstSkus(data, n) {
+        if (!data || data.length === 0) return [];
+        if (!n) n = 10;
+
+        var sorted = data.slice();
+        sorted.sort(function(a, b) { return (b.severity || 0) - (a.severity || 0); });
+        var top = sorted.slice(0, n);
+
+        var cols = [
+            'sku', 'name', 'assessment', 'severity', 'stock_qty', 'sales_qty',
+            'purchase_qty', 'stock_value', 'days_of_stock', 'supplier', 'category', 'location'
+        ];
+
+        return pickColumns(top, cols);
+    }
+
+    // =========================================================================
+    // From POAssessment.gs
+    // =========================================================================
+
+    function mapPOColumns(rawHeaders) {
+        var colMap = {};
+        var headersLower = [];
+        for (var i = 0; i < rawHeaders.length; i++) {
+            headersLower.push({
+                index: i,
+                lower: String(rawHeaders[i]).trim().toLowerCase().replace(/\s+/g, '_')
+            });
+        }
+
+        for (var r = 0; r < PO_COLUMN_RULES.length; r++) {
+            var rule = PO_COLUMN_RULES[r];
+            var found = false;
+
+            for (var c = 0; c < rule.candidates.length && !found; c++) {
+                var candNorm = rule.candidates[c].trim().toLowerCase().replace(/\s+/g, '_');
+                for (var h = 0; h < headersLower.length; h++) {
+                    if (headersLower[h].lower === candNorm || headersLower[h].lower.indexOf(candNorm) !== -1) {
+                        colMap[rule.key] = headersLower[h].index;
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!found) {
+                colMap[rule.key] = null;
+            }
+        }
+
+        // Fallback: if sku not found, try any column with "sku" or use first column
+        if (colMap.sku === null) {
+            for (var s = 0; s < headersLower.length; s++) {
+                if (headersLower[s].lower.indexOf('sku') !== -1) {
+                    colMap.sku = headersLower[s].index;
+                    break;
+                }
+            }
+            if (colMap.sku === null) colMap.sku = 0;
+        }
+
+        return colMap;
+    }
+
+    function parsePOArray(poArray) {
+        // poArray is a 2D array from localStorage (first row = headers)
+        if (!poArray || poArray.length < 2) return [];
+
+        var rawHeaders = poArray[0];
+        var colMap = mapPOColumns(rawHeaders);
+
+        var data = [];
+        for (var i = 1; i < poArray.length; i++) {
+            var row = poArray[i];
+            var obj = {};
+
+            for (var key in colMap) {
+                var idx = colMap[key];
+                obj[key] = (idx !== null && idx < row.length) ? row[idx] : '';
+            }
+
+            // Coerce SKU
+            if (!obj.sku || String(obj.sku).trim() === '') continue;
+            var skuNum = parseFloat(obj.sku);
+            if (!isNaN(skuNum)) {
+                obj.sku = String(Math.floor(skuNum));
+            } else {
+                obj.sku = String(obj.sku).trim();
+            }
+
+            // Coerce po_qty
+            obj.po_qty = parseInt(obj.po_qty, 10) || 0;
+
+            // Coerce unit_cost
+            obj.unit_cost = parseFloat(obj.unit_cost) || 0;
+
+            // Coerce strings
+            obj.product_name = String(obj.name || '').trim();
+            obj.po_number = String(obj.po_number || '').trim();
+            obj.po_supplier = String(obj.po_supplier || '').trim();
+            obj.store = String(obj.store || '').trim();
+            obj.po_state = String(obj.state || '').trim();
+
+            // Filter by state: only pending, in progress, confirmed
+            var stateLower = obj.po_state.toLowerCase();
+            if (stateLower && stateLower !== 'pending' && stateLower !== 'in progress' && stateLower !== 'confirmed') {
+                continue;
+            }
+
+            data.push(obj);
+        }
+
+        return data;
+    }
+
+    /**
+     * Parses PO data stored as array of objects (from sheet_to_json).
+     * Maps column names using PO_COLUMN_RULES and applies same coercion as parsePOArray.
+     */
+    function parsePOObjects(objArray) {
+        if (!objArray || objArray.length === 0) return [];
+
+        // Get all unique keys from the objects
+        var rawHeaders = [];
+        var keySet = {};
+        for (var i = 0; i < objArray.length; i++) {
+            for (var key in objArray[i]) {
+                if (!keySet[key]) {
+                    keySet[key] = true;
+                    rawHeaders.push(key);
+                }
+            }
+        }
+
+        var colMap = mapPOColumns(rawHeaders);
+
+        var data = [];
+        for (var i = 0; i < objArray.length; i++) {
+            var row = objArray[i];
+            var obj = {};
+
+            for (var ruleKey in colMap) {
+                var headerName = colMap[ruleKey] !== null ? rawHeaders[colMap[ruleKey]] : null;
+                obj[ruleKey] = headerName ? (row[headerName] !== undefined ? row[headerName] : '') : '';
+            }
+
+            // Coerce SKU
+            if (!obj.sku || String(obj.sku).trim() === '') continue;
+            var skuNum = parseFloat(obj.sku);
+            if (!isNaN(skuNum)) {
+                obj.sku = String(Math.floor(skuNum));
+            } else {
+                obj.sku = String(obj.sku).trim();
+            }
+
+            // Coerce po_qty
+            obj.po_qty = parseInt(obj.po_qty, 10) || 0;
+
+            // Coerce unit_cost
+            obj.unit_cost = parseFloat(obj.unit_cost) || 0;
+
+            // Coerce strings
+            obj.product_name = String(obj.name || '').trim();
+            obj.po_number = String(obj.po_number || '').trim();
+            obj.po_supplier = String(obj.po_supplier || '').trim();
+            obj.store = String(obj.store || '').trim();
+            obj.po_state = String(obj.state || '').trim();
+
+            // Filter by state: only pending, in progress, confirmed
+            var stateLower = obj.po_state.toLowerCase();
+            if (stateLower && stateLower !== 'pending' && stateLower !== 'in progress' && stateLower !== 'confirmed') {
+                continue;
+            }
+
+            data.push(obj);
+        }
+
+        return data;
+    }
+
+    function assessPO(poData, inventoryData) {
+        if (!poData || poData.length === 0) {
+            return { data: [], summary: { APPROVED: 0, REVIEW: 0, REJECTED: 0 }, total: 0 };
+        }
+
+        // Build inventory lookup by SKU
+        var invMap = {};
+        if (inventoryData && inventoryData.length > 0) {
+            for (var i = 0; i < inventoryData.length; i++) {
+                var inv = inventoryData[i];
+                var invSku = String(inv.sku).trim();
+                if (!invMap[invSku]) {
+                    invMap[invSku] = inv;
+                }
+            }
+        }
+
+        var results = [];
+        var summary = { APPROVED: 0, REVIEW: 0, REJECTED: 0 };
+
+        for (var j = 0; j < poData.length; j++) {
+            var po = poData[j];
+            var sku = String(po.sku).trim();
+            var invItem = invMap[sku] || null;
+            var hasInv = !!invItem;
+
+            // Get inventory values
+            var stockQty = hasInv ? (parseFloat(invItem.stock_qty) || 0) : 0;
+            var salesQty = hasInv ? (parseFloat(invItem.sales_qty) || 0) : 0;
+            var purchaseQty = hasInv ? (parseFloat(invItem.purchase_qty) || 0) : 0;
+            var stockValue = hasInv ? (parseFloat(invItem.stock_value) || 0) : 0;
+            var daysOfStock = hasInv ? (parseFloat(invItem.days_of_stock) || 0) : 0;
+            var avgDailySales = hasInv ? (parseFloat(invItem.avg_daily_sales) || 0) : 0;
+            var turnoverRatio = hasInv ? (parseFloat(invItem.turnover_ratio) || 0) : 0;
+            var assessment = hasInv ? (invItem.assessment || '') : '';
+            var category = hasInv ? (invItem.category || '') : '';
+            var supplier = hasInv ? (invItem.supplier || '') : '';
+
+            var poQty = po.po_qty || 0;
+            var hasDemand = avgDailySales > 0;
+
+            // Calculated PO fields
+            var poCoversDays = hasDemand ? Math.round(poQty / avgDailySales) : 9999;
+            var totalDaysAfterPO = hasDemand ? Math.round((stockQty + poQty) / avgDailySales) : 9999;
+            var suggestedQty = hasDemand ? Math.max(0, Math.round(avgDailySales * 30 - stockQty)) : 0;
+
+            // Decision logic
+            var recommendation;
+            var reason;
+
+            if (!hasInv) {
+                recommendation = 'REVIEW';
+                reason = 'New SKU — not in inventory. PO requests ' + formatInt(poQty) + ' units. Verify demand before proceeding.';
+            } else if (!hasDemand) {
+                recommendation = 'REJECTED';
+                reason = 'No sales history. Holding ' + formatInt(Math.round(stockQty)) +
+                    ' units (value ' + formatNum(stockValue) + '). PO of ' +
+                    formatInt(poQty) + ' would add to unsold inventory.';
+            } else if (totalDaysAfterPO <= 45) {
+                recommendation = 'APPROVED';
+                reason = 'After PO, total coverage is ' + formatNum(totalDaysAfterPO) + ' days (' +
+                    formatInt(Math.round(stockQty)) + ' on hand + ' + formatInt(poQty) + ' PO = ' +
+                    formatInt(Math.round(stockQty + poQty)) + ' units at ' + avgDailySales.toFixed(1) +
+                    '/day). Within 45-day target.';
+            } else if (totalDaysAfterPO <= 60) {
+                recommendation = 'REVIEW';
+                reason = 'After PO, total coverage is ' + formatNum(totalDaysAfterPO) + ' days (' +
+                    formatInt(Math.round(stockQty)) + ' on hand + ' + formatInt(poQty) + ' PO = ' +
+                    formatInt(Math.round(stockQty + poQty)) + ' units at ' + avgDailySales.toFixed(1) +
+                    '/day). Exceeds 45 days — review if ' + formatInt(poQty) + ' units is justified. Suggested 30-day qty: ' +
+                    formatInt(suggestedQty) + '.';
+            } else {
+                recommendation = 'REJECTED';
+                reason = 'After PO, total coverage is ' + formatNum(totalDaysAfterPO) + ' days (' +
+                    formatInt(Math.round(stockQty)) + ' on hand + ' + formatInt(poQty) + ' PO = ' +
+                    formatInt(Math.round(stockQty + poQty)) + ' units at ' + avgDailySales.toFixed(1) +
+                    '/day). Exceeds 60 days — excessive. Suggested 30-day qty: ' +
+                    formatInt(suggestedQty) + '.';
+            }
+
+            summary[recommendation] = (summary[recommendation] || 0) + 1;
+
+            results.push({
+                sku: sku,
+                product_name: po.product_name || '',
+                po_qty: poQty,
+                po_number: po.po_number || '',
+                po_supplier: po.po_supplier || '',
+                store: po.store || '',
+                unit_cost: po.unit_cost || 0,
+                po_state: po.po_state || '',
+                recommendation: recommendation,
+                reason: reason,
+                assessment: assessment,
+                stock_qty: Math.round(stockQty),
+                sales_qty: Math.round(salesQty),
+                purchase_qty: Math.round(purchaseQty),
+                stock_value: round2(stockValue),
+                days_of_stock: round2(daysOfStock, 1),
+                avg_daily_sales: round2(avgDailySales),
+                turnover_ratio: round2(turnoverRatio),
+                po_covers_days: poCoversDays,
+                total_days_after_po: totalDaysAfterPO,
+                suggested_qty: suggestedQty,
+                category: category,
+                supplier: supplier
+            });
+        }
+
+        return {
+            data: results,
+            summary: summary,
+            total: results.length
+        };
+    }
+
+    // =========================================================================
+    // From Ordering.gs
+    // =========================================================================
+
+    function getOrderRecommendations(data, targetDays, showAll, urgencyFilter) {
+        if (!data || data.length === 0) {
+            return { data: [], summary: {}, store_summary: [], total: 0 };
+        }
+
+        if (!targetDays) targetDays = 30;
+
+        var enriched = [];
+        for (var i = 0; i < data.length; i++) {
+            var row = data[i];
+            var avgDaily = row.avg_daily_sales || 0;
+            var stock = row.stock_qty || 0;
+            var dos = row.days_of_stock || 0;
+            var costPrice = row.cost_price || 0;
+
+            var suggestedOrderQty = Math.max(0, Math.round(avgDaily * targetDays - stock));
+            var orderValue = round2(suggestedOrderQty * costPrice);
+
+            // Urgency calculation
+            var urgency;
+            var hasSales = avgDaily > 0;
+
+            if (!hasSales) {
+                urgency = 'NOT NEEDED';
+            } else if (dos >= 9999) {
+                urgency = 'NOT NEEDED';
+            } else if (dos > targetDays) {
+                urgency = 'NOT NEEDED';
+            } else if (dos >= 14 && dos <= targetDays) {
+                urgency = 'NORMAL';
+            } else if (dos >= 7 && dos < 14) {
+                urgency = 'SOON';
+            } else if (dos < 7) {
+                urgency = 'URGENT';
+            } else {
+                urgency = 'NORMAL';
+            }
+
+            enriched.push({
+                sku: row.sku || '',
+                name: row.name || '',
+                location: row.location || '',
+                supplier: row.supplier || '',
+                category: row.category || '',
+                stock_qty: Math.round(stock),
+                avg_daily_sales: round2(avgDaily),
+                days_of_stock: round2(dos, 1),
+                suggested_order_qty: suggestedOrderQty,
+                order_value: orderValue,
+                urgency: urgency,
+                cost_price: round2(costPrice),
+                selling_price: round2(row.selling_price || 0),
+                assessment: row.assessment || '',
+                severity: row.severity || 0
+            });
+        }
+
+        // Build urgency counts from ALL data (before filtering)
+        var urgencyCounts = { URGENT: 0, SOON: 0, NORMAL: 0, 'NOT NEEDED': 0 };
+        for (var u = 0; u < enriched.length; u++) {
+            var urg = enriched[u].urgency;
+            urgencyCounts[urg] = (urgencyCounts[urg] || 0) + 1;
+        }
+
+        // Filter output
+        var output = [];
+        for (var f = 0; f < enriched.length; f++) {
+            var item = enriched[f];
+            if (!showAll && item.urgency === 'NOT NEEDED') continue;
+            if (urgencyFilter && item.urgency !== urgencyFilter) continue;
+            output.push(item);
+        }
+
+        // Summary calculations
+        var totalOrderValue = 0;
+        var totalSkusToOrder = 0;
+        for (var s = 0; s < output.length; s++) {
+            totalOrderValue += output[s].order_value;
+            if (output[s].suggested_order_qty > 0) totalSkusToOrder++;
+        }
+
+        // Store summary
+        var storeGroups = {};
+        for (var g = 0; g < output.length; g++) {
+            var it = output[g];
+            if (it.suggested_order_qty <= 0) continue;
+            var loc = it.location || 'Default';
+            if (!storeGroups[loc]) {
+                storeGroups[loc] = { location: loc, total_order_value: 0, skus_to_order: 0, total_units: 0 };
+            }
+            storeGroups[loc].total_order_value += it.order_value;
+            storeGroups[loc].skus_to_order++;
+            storeGroups[loc].total_units += it.suggested_order_qty;
+        }
+
+        var storeSummary = [];
+        for (var loc2 in storeGroups) {
+            var sg = storeGroups[loc2];
+            sg.total_order_value = round2(sg.total_order_value);
+            storeSummary.push(sg);
+        }
+        storeSummary.sort(function(a, b) { return b.total_order_value - a.total_order_value; });
+
+        return {
+            data: output,
+            total: output.length,
+            summary: {
+                total_skus_to_order: totalSkusToOrder,
+                total_order_value: round2(totalOrderValue),
+                urgency_counts: urgencyCounts,
+                stores_needing_orders: storeSummary.length
+            },
+            store_summary: storeSummary
+        };
+    }
+
+    // =========================================================================
+    // From Utils.gs — applyFilters
+    // =========================================================================
+
+    function applyFilters(data, params) {
+        if (!data || data.length === 0) return data;
+        if (!params) return data;
+
+        var filtered = data;
+
+        // Filter by status (comma-separated)
+        var status = params.status || '';
+        if (status) {
+            var statuses = status.split(',');
+            var statusMap = {};
+            for (var s = 0; s < statuses.length; s++) {
+                var st = statuses[s].trim();
+                if (st) statusMap[st] = true;
+            }
+            filtered = filtered.filter(function(row) {
+                return statusMap[row.assessment || ''];
+            });
+        }
+
+        // Filter by supplier
+        var supplier = params.supplier || '';
+        if (supplier) {
+            filtered = filtered.filter(function(row) {
+                return row.supplier === supplier;
+            });
+        }
+
+        // Filter by category
+        var category = params.category || '';
+        if (category) {
+            filtered = filtered.filter(function(row) {
+                return row.category === category;
+            });
+        }
+
+        // Filter by location
+        var location = params.location || '';
+        if (location) {
+            filtered = filtered.filter(function(row) {
+                return row.location === location;
+            });
+        }
+
+        // Filter by search text (matches SKU or name)
+        var search = (params.search || '').trim().toLowerCase();
+        if (search) {
+            filtered = filtered.filter(function(row) {
+                var skuMatch = (row.sku || '').toLowerCase().indexOf(search) !== -1;
+                var nameMatch = (row.name || '').toLowerCase().indexOf(search) !== -1;
+                return skuMatch || nameMatch;
+            });
+        }
+
+        return filtered;
+    }
+
+    // =========================================================================
+    // From Upload.gs — normalizeUploadRow / processUploads
+    // =========================================================================
+
+    function normalizeUploadRow(row, type) {
+        var normalized = {};
+
+        // Try to match column names using COLUMN_MAP
+        for (var key in row) {
+            var lowerKey = String(key).trim().toLowerCase();
+            var lowerKeySpaces = lowerKey.replace(/_/g, ' ').replace(/\s+/g, ' ');
+            var lowerKeyUnder = lowerKey.replace(/\s+/g, '_');
+            var canonical = null;
+
+            for (var mapKey in COLUMN_MAP) {
+                var aliases = COLUMN_MAP[mapKey];
+                for (var a = 0; a < aliases.length; a++) {
+                    if (lowerKey === aliases[a] || lowerKeySpaces === aliases[a] || lowerKeyUnder === aliases[a]) {
+                        canonical = mapKey;
+                        break;
+                    }
+                }
+                if (canonical) break;
+            }
+
+            if (canonical) {
+                normalized[canonical] = row[key];
+            } else {
+                // Keep the original key in lowercase with underscores
+                normalized[lowerKey.replace(/\s/g, '_')] = row[key];
+            }
+        }
+
+        // Coerce numeric fields
+        var numFields = ['stock_qty', 'sales_qty', 'purchase_qty', 'cost_price',
+                         'selling_price', 'stock_value', 'sales_orders', 'sales_returns',
+                         'sales_revenue', 'sales_cogs'];
+        for (var n = 0; n < numFields.length; n++) {
+            var f = numFields[n];
+            if (normalized[f] !== undefined && normalized[f] !== null) {
+                var v = parseFloat(normalized[f]);
+                normalized[f] = isNaN(v) ? 0 : v;
+            } else {
+                normalized[f] = 0;
+            }
+        }
+
+        // Ensure SKU
+        if (normalized.sku !== undefined && normalized.sku !== null) {
+            var skuNum = parseFloat(normalized.sku);
+            if (!isNaN(skuNum)) {
+                normalized.sku = String(Math.floor(skuNum));
+            } else {
+                normalized.sku = String(normalized.sku).trim();
+            }
+        }
+
+        return normalized;
+    }
+
+    /**
+     * Processes uploaded data from localStorage.
+     * Mirrors Upload.gs handleProcess() exactly.
+     */
+    function processUploads() {
+        try {
+            // Step 1: Read uploaded data from localStorage
+            var sohRaw = localStorage.getItem('stock_upload_soh');
+            var salesRaw = localStorage.getItem('stock_upload_sales');
+            var poRaw = localStorage.getItem('stock_upload_po');
+
+            if (!sohRaw) {
+                return { error: 'SOH data is missing. Please upload SOH file.' };
+            }
+            if (!salesRaw) {
+                return { error: 'Sales data is missing. Please upload Sales file.' };
+            }
+
+            var sohData = JSON.parse(sohRaw);
+            var salesData = JSON.parse(salesRaw);
+
+            if (!Array.isArray(sohData) || sohData.length < 1) {
+                return { error: 'SOH data is empty.' };
+            }
+            if (!Array.isArray(salesData) || salesData.length < 1) {
+                return { error: 'Sales data is empty.' };
+            }
+
+            // Step 2: Normalize SOH data — aggregate by SKU
+            var sohBySku = {};
+            for (var i = 0; i < sohData.length; i++) {
+                var row = normalizeUploadRow(sohData[i], 'soh');
+                if (!row || !row.sku) continue;
+
+                var sku = String(row.sku).trim();
+                if (!sohBySku[sku]) {
+                    sohBySku[sku] = {
+                        sku: sku,
+                        name: row.name || 'Unknown',
+                        category: row.category || '',
+                        sub_category: row.sub_category || '',
+                        supplier: row.supplier || '',
+                        location: row.location || '',
+                        stock_qty: 0,
+                        cost_price: row.cost_price || 0,
+                        selling_price: row.selling_price || 0,
+                        stock_value: 0,
+                        warehouse_count: 0,
+                        country: row.country || '',
+                        warehouse_type: row.warehouse_type || ''
+                    };
+                }
+                sohBySku[sku].stock_qty += (row.stock_qty || 0);
+                sohBySku[sku].stock_value += (row.stock_value || 0);
+                sohBySku[sku].warehouse_count++;
+
+                // Keep the name/location from the row with the highest stock
+                if ((row.stock_qty || 0) > 0) {
+                    if (row.name) sohBySku[sku].name = row.name;
+                    if (row.location) sohBySku[sku].location = row.location;
+                    if (row.category) sohBySku[sku].category = row.category;
+                }
+            }
+
+            // Step 3: Normalize Sales data — aggregate by SKU
+            var salesBySku = {};
+            for (var s = 0; s < salesData.length; s++) {
+                var sRow = normalizeUploadRow(salesData[s], 'sales');
+                if (!sRow || !sRow.sku) continue;
+
+                var sSku = String(sRow.sku).trim();
+                if (!salesBySku[sSku]) {
+                    salesBySku[sSku] = {
+                        sales_qty: 0,
+                        sales_orders: 0,
+                        sales_returns: 0,
+                        sales_revenue: 0,
+                        sales_cogs: 0
+                    };
+                }
+                salesBySku[sSku].sales_qty += (sRow.sales_qty || 0);
+                salesBySku[sSku].sales_orders += (sRow.sales_orders || 0);
+                salesBySku[sSku].sales_returns += (sRow.sales_returns || 0);
+                salesBySku[sSku].sales_revenue += (sRow.sales_revenue || 0);
+                salesBySku[sSku].sales_cogs += (sRow.sales_cogs || 0);
+            }
+
+            // Step 4: Merge SOH + Sales
+            var merged = [];
+            var outColumns = [
+                'sku', 'name', 'category', 'sub_category', 'supplier', 'location',
+                'country', 'warehouse_type', 'stock_qty', 'sales_qty', 'purchase_qty',
+                'sales_orders', 'sales_returns', 'sales_revenue', 'sales_cogs',
+                'cost_price', 'selling_price', 'stock_value',
+                'last_sale_date', 'last_purchase_date', 'warehouse_count'
+            ];
+
+            for (var msku in sohBySku) {
+                var inv = sohBySku[msku];
+                var sal = salesBySku[msku] || {};
+
+                // Fill cost from sales COGS if SOH cost is 0
+                var costPrice = inv.cost_price || 0;
+                if (costPrice === 0 && (sal.sales_cogs || 0) > 0 && (sal.sales_qty || 0) > 0) {
+                    costPrice = round2(sal.sales_cogs / sal.sales_qty);
+                }
+
+                var sellingPrice = inv.selling_price || 0;
+                if (sellingPrice === 0 && (sal.sales_revenue || 0) > 0 && (sal.sales_qty || 0) > 0) {
+                    sellingPrice = round2(sal.sales_revenue / sal.sales_qty);
+                }
+
+                var stockValue = inv.stock_value || 0;
+                if (stockValue === 0) {
+                    stockValue = round2(inv.stock_qty * costPrice);
+                }
+
+                var purchaseQty = 0; // No separate purchase file in this flow
+
+                merged.push({
+                    sku: msku,
+                    name: inv.name,
+                    category: inv.category || 'Uncategorized',
+                    sub_category: inv.sub_category || '',
+                    supplier: inv.supplier || 'Unknown',
+                    location: inv.location || 'Default',
+                    country: inv.country || '',
+                    warehouse_type: inv.warehouse_type || '',
+                    stock_qty: Math.round(inv.stock_qty),
+                    sales_qty: Math.round(sal.sales_qty || 0),
+                    purchase_qty: purchaseQty,
+                    sales_orders: Math.round(sal.sales_orders || 0),
+                    sales_returns: Math.round(sal.sales_returns || 0),
+                    sales_revenue: round2(sal.sales_revenue || 0),
+                    sales_cogs: round2(sal.sales_cogs || 0),
+                    cost_price: costPrice,
+                    selling_price: sellingPrice,
+                    stock_value: stockValue,
+                    last_sale_date: '',
+                    last_purchase_date: '',
+                    warehouse_count: inv.warehouse_count || 1
+                });
+            }
+
+            // Step 5: Save merged data to localStorage as main data
+            localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(merged));
+            // Save timestamp
+            localStorage.setItem(CONFIG.STORAGE_KEY + '_ts', new Date().toISOString());
+
+            // Step 6: Handle PO data
+            var poUpdated = false;
+            if (poRaw) {
+                var poData = JSON.parse(poRaw);
+                if (Array.isArray(poData) && poData.length > 0) {
+                    localStorage.setItem(CONFIG.STORAGE_PO_KEY, JSON.stringify(poData));
+                    localStorage.setItem(CONFIG.STORAGE_PO_KEY + '_ts', new Date().toISOString());
+                    poUpdated = true;
+                }
+            }
+
+            // Step 7: Clear upload storage keys
+            localStorage.removeItem('stock_upload_soh');
+            localStorage.removeItem('stock_upload_sales');
+            localStorage.removeItem('stock_upload_po');
+
+            var msg = 'Data updated successfully! ' + merged.length + ' SKUs processed.';
+            if (poUpdated) msg += ' PO file updated.';
+
+            return {
+                success: true,
+                message: msg,
+                sku_count: merged.length
+            };
+
+        } catch (err) {
+            return { error: 'Processing failed: ' + err.message };
+        }
+    }
+
+    function processUploadsFromMemory(cache) {
+        try {
+            var sohData = cache.soh;
+            var salesData = cache.sales;
+            var poRawData = cache.po;
+
+            if (!sohData || !Array.isArray(sohData) || sohData.length < 1) {
+                return { error: 'SOH data is missing. Please upload SOH file.' };
+            }
+            if (!salesData || !Array.isArray(salesData) || salesData.length < 1) {
+                return { error: 'Sales data is missing. Please upload Sales file.' };
+            }
+
+            var sohBySku = {};
+            for (var i = 0; i < sohData.length; i++) {
+                var row = normalizeUploadRow(sohData[i], 'soh');
+                if (!row || !row.sku) continue;
+                var sku = String(row.sku).trim();
+                if (!sohBySku[sku]) {
+                    sohBySku[sku] = { sku: sku, name: row.name || 'Unknown', category: row.category || '', sub_category: row.sub_category || '', supplier: row.supplier || '', location: row.location || '', stock_qty: 0, cost_price: row.cost_price || 0, selling_price: row.selling_price || 0, stock_value: 0, warehouse_count: 0 };
+                }
+                sohBySku[sku].stock_qty += (row.stock_qty || 0);
+                sohBySku[sku].stock_value += (row.stock_value || 0);
+                sohBySku[sku].warehouse_count++;
+                if ((row.stock_qty || 0) > 0) { if (row.name) sohBySku[sku].name = row.name; if (row.location) sohBySku[sku].location = row.location; if (row.category) sohBySku[sku].category = row.category; }
+            }
+
+            var salesBySku = {};
+            for (var s = 0; s < salesData.length; s++) {
+                var sRow = normalizeUploadRow(salesData[s], 'sales');
+                if (!sRow || !sRow.sku) continue;
+                var sSku = String(sRow.sku).trim();
+                if (!salesBySku[sSku]) { salesBySku[sSku] = { sales_qty: 0, sales_orders: 0, sales_returns: 0, sales_revenue: 0, sales_cogs: 0 }; }
+                salesBySku[sSku].sales_qty += (sRow.sales_qty || 0); salesBySku[sSku].sales_orders += (sRow.sales_orders || 0); salesBySku[sSku].sales_returns += (sRow.sales_returns || 0); salesBySku[sSku].sales_revenue += (sRow.sales_revenue || 0); salesBySku[sSku].sales_cogs += (sRow.sales_cogs || 0);
+            }
+
+            var merged = [];
+            for (var msku in sohBySku) {
+                var inv = sohBySku[msku]; var sal = salesBySku[msku] || {};
+                var costPrice = inv.cost_price || 0;
+                if (costPrice === 0 && (sal.sales_cogs || 0) > 0 && (sal.sales_qty || 0) > 0) costPrice = round2(sal.sales_cogs / sal.sales_qty);
+                var sellingPrice = inv.selling_price || 0;
+                if (sellingPrice === 0 && (sal.sales_revenue || 0) > 0 && (sal.sales_qty || 0) > 0) sellingPrice = round2(sal.sales_revenue / sal.sales_qty);
+                var stockValue = inv.stock_value || 0;
+                if (stockValue === 0) stockValue = round2(inv.stock_qty * costPrice);
+                merged.push({ sku: msku, name: inv.name, category: inv.category || 'Uncategorized', sub_category: inv.sub_category || '', supplier: inv.supplier || 'Unknown', location: inv.location || 'Default', country: '', warehouse_type: '', stock_qty: Math.round(inv.stock_qty), sales_qty: Math.round(sal.sales_qty || 0), purchase_qty: 0, sales_orders: Math.round(sal.sales_orders || 0), sales_returns: Math.round(sal.sales_returns || 0), sales_revenue: round2(sal.sales_revenue || 0), sales_cogs: round2(sal.sales_cogs || 0), cost_price: costPrice, selling_price: sellingPrice, stock_value: stockValue, last_sale_date: '', last_purchase_date: '', warehouse_count: inv.warehouse_count || 1 });
+            }
+
+            // Store in memory + IndexedDB (persists across refreshes)
+            _cachedData = merged;
+            _dataLoaded = true;
+            saveData(merged);
+
+            // Handle PO data
+            var poUpdated = false;
+            if (poRawData && Array.isArray(poRawData) && poRawData.length > 0) {
+                _cachedPO = poRawData;
+                _memoryPOData = poRawData;
+                savePOData(poRawData);
+                poUpdated = true;
+            }
+
+            var msg = 'Data updated successfully! ' + merged.length + ' SKUs processed.';
+            if (poUpdated) msg += ' PO file updated.';
+            return { success: true, message: msg, sku_count: merged.length };
+        } catch (err) {
+            return { error: 'Processing failed: ' + err.message };
+        }
+    }
+
+    var _memoryPOData = null;
+
+    // =========================================================================
+    // IndexedDB persistence (handles large datasets, no size limit)
+    // =========================================================================
+
+    var DB_NAME = 'StockDashboard';
+    var DB_VERSION = 1;
+    var _dbReady = false;
+    var _cachedData = null;
+    var _cachedPO = null;
+    var _dataLoaded = false;
+
+    function openDB() {
+        return new Promise(function(resolve, reject) {
+            var req = indexedDB.open(DB_NAME, DB_VERSION);
+            req.onupgradeneeded = function(e) {
+                var db = e.target.result;
+                if (!db.objectStoreNames.contains('data')) db.createObjectStore('data');
+            };
+            req.onsuccess = function(e) { resolve(e.target.result); };
+            req.onerror = function(e) { reject(e.target.error); };
+        });
+    }
+
+    function saveData(rawData) {
+        _cachedData = rawData;
+        _dataLoaded = true;
+        return openDB().then(function(db) {
+            return new Promise(function(resolve, reject) {
+                var tx = db.transaction('data', 'readwrite');
+                var store = tx.objectStore('data');
+                store.put(rawData, 'inventory');
+                store.put(new Date().toISOString(), 'inventory_ts');
+                tx.oncomplete = function() { resolve(); };
+                tx.onerror = function(e) { reject(e.target.error); };
+            });
+        }).catch(function() {});
+    }
+
+    function loadDataFromDB() {
+        return openDB().then(function(db) {
+            return new Promise(function(resolve, reject) {
+                var tx = db.transaction('data', 'readonly');
+                var store = tx.objectStore('data');
+                var req = store.get('inventory');
+                req.onsuccess = function() {
+                    var data = req.result || [];
+                    _cachedData = data;
+                    _dataLoaded = data.length > 0;
+                    resolve(data);
+                };
+                req.onerror = function() { resolve([]); };
+            });
+        }).catch(function() { return []; });
+    }
+
+    function loadData() {
+        if (_cachedData && _cachedData.length > 0) return _cachedData;
+        if (_bundledData && _bundledData.length > 0) return _bundledData;
+        return [];
+    }
+
+    function savePOData(poData) {
+        _cachedPO = poData;
+        return openDB().then(function(db) {
+            return new Promise(function(resolve, reject) {
+                var tx = db.transaction('data', 'readwrite');
+                var store = tx.objectStore('data');
+                store.put(poData, 'po');
+                store.put(new Date().toISOString(), 'po_ts');
+                tx.oncomplete = function() { resolve(); };
+                tx.onerror = function(e) { reject(e.target.error); };
+            });
+        }).catch(function() {});
+    }
+
+    function loadPODataFromStorage() {
+        if (_cachedPO && _cachedPO.length > 0) return _cachedPO;
+        if (_memoryPOData && _memoryPOData.length > 0) return _memoryPOData;
+        return [];
+    }
+
+    function loadPOFromDB() {
+        return openDB().then(function(db) {
+            return new Promise(function(resolve, reject) {
+                var tx = db.transaction('data', 'readonly');
+                var store = tx.objectStore('data');
+                var req = store.get('po');
+                req.onsuccess = function() {
+                    _cachedPO = req.result || [];
+                    resolve(_cachedPO);
+                };
+                req.onerror = function() { resolve([]); };
+            });
+        }).catch(function() { return []; });
+    }
+
+    function clearData() {
+        _cachedData = null;
+        _cachedPO = null;
+        _dataLoaded = false;
+        _bundledData = null;
+        _bundledLoaded = false;
+        _memoryPOData = null;
+        return openDB().then(function(db) {
+            return new Promise(function(resolve) {
+                var tx = db.transaction('data', 'readwrite');
+                tx.objectStore('data').clear();
+                tx.oncomplete = function() { resolve(); };
+                tx.onerror = function() { resolve(); };
+            });
+        }).catch(function() {});
+    }
+
+    var _bundledData = null;
+    var _bundledLoading = false;
+    var _bundledLoaded = false;
+
+    function hasData() {
+        return _dataLoaded || _bundledLoaded || (_cachedData && _cachedData.length > 0);
+    }
+
+    function initDB() {
+        return loadDataFromDB().then(function(data) {
+            if (data && data.length > 0) {
+                _cachedData = data;
+                _dataLoaded = true;
+            }
+            return loadPOFromDB();
+        }).then(function(po) {
+            if (po && po.length > 0) _cachedPO = po;
+        }).catch(function() {});
+    }
+
+    function loadBundledData() {
+        if (_bundledLoaded || _bundledLoading) return Promise.resolve();
+        _bundledLoading = true;
+        return fetch('data/inventory.json')
+            .then(function(res) { return res.json(); })
+            .then(function(arr) {
+                if (!arr || arr.length < 2) return;
+                var headers = arr[0];
+                var rows = [];
+                for (var i = 1; i < arr.length; i++) {
+                    var obj = {};
+                    for (var j = 0; j < headers.length; j++) {
+                        obj[headers[j]] = arr[i][j];
+                    }
+                    rows.push(obj);
+                }
+                _bundledData = rows;
+                _bundledLoaded = true;
+                _bundledLoading = false;
+            })
+            .catch(function() { _bundledLoading = false; });
+    }
+
+    /**
+     * Loads raw data from localStorage, normalizes/coerces it, and runs assessment.
+     * This is the main entry point for all data views.
+     */
+    function loadAndAssess(analysisDays) {
+        var rawData = loadData();
+        if (!rawData || rawData.length === 0) return [];
+
+        // The data from localStorage is stored as objects (already merged),
+        // but date fields are stored as strings. Re-parse them.
+        for (var i = 0; i < rawData.length; i++) {
+            var r = rawData[i];
+
+            // Coerce numeric fields
+            for (var n = 0; n < NUMERIC_COLUMNS.length; n++) {
+                var col = NUMERIC_COLUMNS[n];
+                if (r[col] !== undefined && r[col] !== null) {
+                    var num = parseFloat(r[col]);
+                    r[col] = isNaN(num) ? 0 : num;
+                } else {
+                    if (col !== 'stock_value') {
+                        r[col] = 0;
+                    }
+                }
+            }
+
+            // Coerce date fields
+            for (var d = 0; d < DATE_COLUMNS.length; d++) {
+                var dcol = DATE_COLUMNS[d];
+                if (r[dcol] !== undefined && r[dcol] !== null && r[dcol] !== '') {
+                    var dateVal = r[dcol];
+                    if (dateVal instanceof Date && !isNaN(dateVal.getTime())) {
+                        // already a Date
+                    } else {
+                        var parsed = new Date(dateVal);
+                        r[dcol] = isNaN(parsed.getTime()) ? null : parsed;
+                    }
+                } else {
+                    r[dcol] = null;
+                }
+            }
+
+            // Fill string defaults
+            for (var skey in STRING_DEFAULTS) {
+                if (!r[skey] || String(r[skey]).trim() === '') {
+                    r[skey] = STRING_DEFAULTS[skey];
+                } else {
+                    r[skey] = String(r[skey]).trim();
+                }
+            }
+
+            // Ensure SKU
+            if (!r.sku || String(r.sku).trim() === '') {
+                r.sku = 'UNKNOWN_' + i;
+            } else {
+                r.sku = String(r.sku).trim();
+            }
+        }
+
+        return assessAll(rawData, analysisDays);
+    }
+
+    /**
+     * Returns file info for the data status display.
+     */
+    function getFilesInfo() {
+        var info = { data_files: [] };
+        var ts = localStorage.getItem(CONFIG.STORAGE_KEY + '_ts');
+        var data = loadData();
+
+        if (data && data.length > 0) {
+            info.data_files.push({
+                name: 'RawData',
+                rows: data.length,
+                last_modified: ts || 'unknown'
+            });
+        }
+
+        var poTs = localStorage.getItem(CONFIG.STORAGE_PO_KEY + '_ts');
+        var poData = loadPODataFromStorage();
+        if (poData && poData.length > 0) {
+            info.data_files.push({
+                name: 'PO',
+                rows: poData.length,
+                last_modified: poTs || 'unknown'
+            });
+        }
+
+        return info;
+    }
+
+    // =========================================================================
+    // Public API
+    // =========================================================================
+
+    return {
+        // Constants
+        COLUMN_MAP: COLUMN_MAP,
+
+        // Loader
+        normalizeColumns: normalizeColumns,
+        coerceRow: coerceRow,
+
+        // Assessor
+        assessSku: assessSku,
+        assessAll: assessAll,
+
+        // Aggregator
+        aggregateOverview: aggregateOverview,
+        aggregateBySupplier: aggregateBySupplier,
+        aggregateByCategory: aggregateByCategory,
+        aggregateByLocation: aggregateByLocation,
+        getTopWorstSkus: getTopWorstSkus,
+
+        // PO Assessment
+        assessPO: assessPO,
+        parsePOArray: parsePOArray,
+
+        // Ordering
+        getOrderRecommendations: getOrderRecommendations,
+
+        // Filters
+        applyFilters: applyFilters,
+
+        // Data persistence
+        saveData: saveData,
+        loadData: loadData,
+        savePOData: savePOData,
+        loadPOData: function() {
+            var raw = _memoryPOData || loadPODataFromStorage();
+            if (!raw || raw.length === 0) return [];
+            if (Array.isArray(raw) && raw.length > 0 && Array.isArray(raw[0])) {
+                return parsePOArray(raw);
+            }
+            return parsePOObjects(raw);
+        },
+        clearData: clearData,
+        hasData: hasData,
+        loadBundledData: loadBundledData,
+        initDB: initDB,
+
+        // Processing
+        processUploads: processUploads,
+        processUploadsFromMemory: processUploadsFromMemory,
+        loadAndAssess: loadAndAssess,
+        getFilesInfo: getFilesInfo,
+
+        // Helpers (exposed for use by api.js)
+        round2: round2,
+        formatDate: formatDate,
+        daysBetween: daysBetween,
+        pickColumns: pickColumns,
+        normalizeUploadRow: normalizeUploadRow
+    };
+
+})();
+
+// Contents of utils.js
+const STATUS_COLORS = {
+    'CRITICAL - Dead Stock': '#DC2626',
+    'CRITICAL - No Sales, Still Purchasing': '#B91C1C',
+    'HIGH RISK - Overstocked': '#F97316',
+    'HIGH RISK - Overstocked & Over-Purchasing': '#EA580C',
+    'WARNING - Over-Purchasing': '#EAB308',
+    'STOCKOUT - Selling but No Stock': '#EF4444',
+    'LOW STOCK - May Stockout Soon': '#F59E0B',
+    'HEALTHY - Good Turnover': '#22C55E',
+    'MEDIUM - Adequate Stock': '#3B82F6',
+    'NEW/PIPELINE - Purchased, Awaiting Stock': '#8B5CF6',
+    'INACTIVE': '#9CA3AF',
+};
+
+const STATUS_BG_COLORS = {
+    'CRITICAL - Dead Stock': '#FEE2E2',
+    'CRITICAL - No Sales, Still Purchasing': '#FEE2E2',
+    'HIGH RISK - Overstocked': '#FFEDD5',
+    'HIGH RISK - Overstocked & Over-Purchasing': '#FFEDD5',
+    'WARNING - Over-Purchasing': '#FEF9C3',
+    'STOCKOUT - Selling but No Stock': '#FEE2E2',
+    'LOW STOCK - May Stockout Soon': '#FEF3C7',
+    'HEALTHY - Good Turnover': '#DCFCE7',
+    'MEDIUM - Adequate Stock': '#DBEAFE',
+    'NEW/PIPELINE - Purchased, Awaiting Stock': '#F3E8FF',
+    'INACTIVE': '#F3F4F6',
+};
+
+function getStatusColor(status) {
+    return STATUS_COLORS[status] || '#6B7280';
+}
+
+function getStatusBg(status) {
+    return STATUS_BG_COLORS[status] || '#F3F4F6';
+}
+
+function formatNumber(n) {
+    if (n == null || isNaN(n)) return '0';
+    return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n);
+}
+
+function formatCurrency(n) {
+    if (n == null || isNaN(n)) return '0.00';
+    return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+}
+
+function formatPct(n) {
+    if (n == null || isNaN(n)) return '0%';
+    return n.toFixed(1) + '%';
+}
+
+function statusBadge(status) {
+    const color = getStatusColor(status);
+    const bg = getStatusBg(status);
+    return `<span class="status-badge" style="background:${bg};color:${color};border:1px solid ${color}">${status}</span>`;
+}
+
+function newSkuBadge(isNew) {
+    if (!isNew) return '';
+    return '<span class="badge-new">NEW</span>';
+}
+
+function recentBadge(isRecent) {
+    if (!isRecent) return '';
+    return '<span class="badge-recent">RECENT</span>';
+}
+
+function poBadge(recommendation) {
+    const cls = (recommendation || '').toLowerCase();
+    const labels = { 'approved': 'APPROVED', 'review': 'TO REVIEW', 'rejected': 'REJECTED' };
+    return `<span class="po-badge ${cls}">${labels[cls] || recommendation}</span>`;
+}
+
+function urgencyBadge(urgency) {
+    const cls = (urgency || '').toLowerCase().replace(' ', '-');
+    return `<span class="urgency-badge ${cls}">${urgency}</span>`;
+}
+
+function shortStatus(status) {
+    const map = {
+        'CRITICAL - Dead Stock': 'Dead Stock',
+        'CRITICAL - No Sales, Still Purchasing': 'No Sales + Buying',
+        'HIGH RISK - Overstocked': 'Overstocked',
+        'HIGH RISK - Overstocked & Over-Purchasing': 'Overstock+Buy',
+        'WARNING - Over-Purchasing': 'Over-Purchasing',
+        'STOCKOUT - Selling but No Stock': 'Stockout',
+        'LOW STOCK - May Stockout Soon': 'Low Stock',
+        'HEALTHY - Good Turnover': 'Healthy',
+        'MEDIUM - Adequate Stock': 'Adequate',
+        'NEW/PIPELINE - Purchased, Awaiting Stock': 'Pipeline',
+        'INACTIVE': 'Inactive',
+    };
+    return map[status] || status;
+}
+
+// Contents of api.js
+const _uploadCache = {};
+
+const API = {
+    async get(action, params = {}) {
+        const period = parseInt(params.period) || CONFIG.DEFAULT_PERIOD;
+
+        switch(action) {
+            case 'overview': {
+                let data = Engine.loadAndAssess(period);
+                data = Engine.applyFilters(data, params);
+                const overview = Engine.aggregateOverview(data);
+                overview.top_worst = Engine.getTopWorstSkus(data, 10);
+                overview.files = Engine.getFilesInfo();
+                return overview;
+            }
+            case 'skus': {
+                let data = Engine.loadAndAssess(period);
+                data = Engine.applyFilters(data, params);
+                // sort
+                const sortBy = params.sort || 'severity';
+                const order = params.order || 'desc';
+                data.sort((a, b) => {
+                    let va = a[sortBy], vb = b[sortBy];
+                    if (va == null) va = order === 'asc' ? Infinity : -Infinity;
+                    if (vb == null) vb = order === 'asc' ? Infinity : -Infinity;
+                    if (typeof va === 'string') va = va.toLowerCase();
+                    if (typeof vb === 'string') vb = vb.toLowerCase();
+                    return order === 'asc' ? (va < vb ? -1 : va > vb ? 1 : 0) : (va > vb ? -1 : va < vb ? 1 : 0);
+                });
+                return { data, total: data.length };
+            }
+            case 'suppliers': {
+                let data = Engine.loadAndAssess(period);
+                data = Engine.applyFilters(data, params);
+                return Engine.aggregateBySupplier(data);
+            }
+            case 'categories': {
+                let data = Engine.loadAndAssess(period);
+                data = Engine.applyFilters(data, params);
+                return Engine.aggregateByCategory(data);
+            }
+            case 'new-purchases': {
+                let data = Engine.loadAndAssess(period);
+                data = Engine.applyFilters(data, params);
+                const newSkus = data.filter(r => r.is_new_sku);
+                const recent = data.filter(r => r.recently_purchased);
+                const cols = ['sku','name','category','supplier','location','assessment','stock_qty','sales_qty','purchase_qty','stock_value','days_since_last_purchase','is_new_sku','recently_purchased'];
+                return {
+                    new_skus: newSkus.map(r => pick(r, cols)),
+                    recently_purchased: recent.map(r => pick(r, cols)),
+                    new_count: newSkus.length,
+                    recent_count: recent.length,
+                };
+            }
+            case 'locations': {
+                let data = Engine.loadAndAssess(period);
+                data = Engine.applyFilters(data, params);
+                return Engine.aggregateByLocation(data);
+            }
+            case 'po-assessment': {
+                const invData = Engine.loadAndAssess(period);
+                const poData = Engine.loadPOData();
+                if (!poData || poData.length === 0) return { error: 'PO data not found', data: [], summary: {} };
+                return Engine.assessPO(poData, invData);
+            }
+            case 'ordering': {
+                let data = Engine.loadAndAssess(period);
+                data = Engine.applyFilters(data, params);
+                return Engine.getOrderRecommendations(data, parseInt(params.target_days || '30'));
+            }
+            case 'filters': {
+                const data = Engine.loadAndAssess(period);
+                if (!data || data.length === 0) return { statuses: [], suppliers: [], categories: [], locations: [], periods: CONFIG.PERIOD_OPTIONS };
+                const statuses = new Set(), suppliers = new Set(), categories = new Set(), locations = new Set();
+                data.forEach(r => { if(r.assessment) statuses.add(r.assessment); if(r.supplier) suppliers.add(r.supplier); if(r.category) categories.add(r.category); if(r.location) locations.add(r.location); });
+                return { statuses: [...statuses].sort(), suppliers: [...suppliers].sort(), categories: [...categories].sort(), locations: [...locations].sort(), periods: CONFIG.PERIOD_OPTIONS };
+            }
+            case 'upload-status':
+                return { authenticated: true, files: {} };
+            default:
+                return { error: 'Unknown action' };
+        }
+    },
+
+    async post(action, body = {}) {
+        // Handle uploads locally
+        if (action === 'login') return { success: true, username: 'local' };
+        if (action === 'logout') return { success: true };
+        if (action === 'upload') {
+            _uploadCache[body.type] = body.data;
+            return { success: true, type: body.type, rows: body.data.length };
+        }
+        if (action === 'process') {
+            const result = Engine.processUploadsFromMemory(_uploadCache);
+            if (result.error) throw new Error(result.error);
+            _uploadCache.soh = null;
+            _uploadCache.sales = null;
+            _uploadCache.po = null;
+            return result;
+        }
+        return { error: 'Unknown action' };
+    }
+};
+
+function pick(obj, keys) {
+    const r = {};
+    keys.forEach(k => { if (obj[k] !== undefined) r[k] = obj[k]; });
+    return r;
+}
+
+// Contents of filters.js
+const FilterState = {
+    status: '',
+    supplier: '',
+    category: '',
+    location: '',
+    period: 90,
+    search: '',
+    _listeners: [],
+
+    onChange(fn) { this._listeners.push(fn); },
+
+    getParams() {
+        return {
+            status: this.status,
+            supplier: this.supplier,
+            category: this.category,
+            location: this.location,
+            period: this.period,
+            search: this.search,
+        };
+    },
+
+    _notify() {
+        this._listeners.forEach(fn => fn(this.getParams()));
+    },
+
+    async init() {
+        try {
+            const data = await API.get('filters');
+            this._populateSelect('filter-status', data.statuses);
+            this._populateSelect('filter-supplier', data.suppliers);
+            this._populateSelect('filter-category', data.categories);
+            this._populateSelect('filter-location', data.locations);
+        } catch (e) {
+            console.error('Failed to load filters:', e);
+        }
+
+        document.getElementById('filter-status').addEventListener('change', (e) => {
+            this.status = e.target.value;
+            this._notify();
+        });
+        document.getElementById('filter-supplier').addEventListener('change', (e) => {
+            this.supplier = e.target.value;
+            this._notify();
+        });
+        document.getElementById('filter-category').addEventListener('change', (e) => {
+            this.category = e.target.value;
+            this._notify();
+        });
+        document.getElementById('filter-location').addEventListener('change', (e) => {
+            this.location = e.target.value;
+            this._notify();
+        });
+        document.getElementById('filter-period').addEventListener('change', (e) => {
+            this.period = parseInt(e.target.value);
+            this._notify();
+        });
+
+        let searchTimer;
+        document.getElementById('filter-search').addEventListener('input', (e) => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => {
+                this.search = e.target.value;
+                this._notify();
+            }, 300);
+        });
+    },
+
+    _populateSelect(id, options) {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const current = sel.value;
+        while (sel.options.length > 1) sel.remove(1);
+        options.forEach(opt => {
+            const o = document.createElement('option');
+            o.value = opt;
+            o.textContent = opt;
+            sel.appendChild(o);
+        });
+        if (current) sel.value = current;
+    },
+
+    reset() {
+        this.status = '';
+        this.supplier = '';
+        this.category = '';
+        this.location = '';
+        this.period = 90;
+        this.search = '';
+        document.getElementById('filter-status').value = '';
+        document.getElementById('filter-supplier').value = '';
+        document.getElementById('filter-category').value = '';
+        document.getElementById('filter-location').value = '';
+        document.getElementById('filter-period').value = '90';
+        document.getElementById('filter-search').value = '';
+        this._notify();
+    }
+};
+
+// Contents of charts.js
+const Charts = {
+    _instances: {},
+
+    _destroy(id) {
+        if (this._instances[id]) {
+            this._instances[id].destroy();
+            delete this._instances[id];
+        }
+    },
+
+    statusDistribution(canvasId, distribution) {
+        this._destroy(canvasId);
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+        const labels = Object.keys(distribution);
+        const values = Object.values(distribution);
+        const colors = labels.map(l => getStatusColor(l));
+        this._instances[canvasId] = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels.map(shortStatus),
+                datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right', labels: { boxWidth: 12, padding: 8, font: { size: 11 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => {
+                                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                const pct = ((ctx.parsed / total) * 100).toFixed(1);
+                                return ` ${ctx.label}: ${ctx.parsed} (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    },
+
+    supplierHealth(canvasId, suppliers) {
+        this._destroy(canvasId);
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+        const top = suppliers.slice(0, 15);
+        this._instances[canvasId] = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: top.map(s => s.supplier.length > 20 ? s.supplier.slice(0, 18) + '...' : s.supplier),
+                datasets: [{
+                    label: 'Health Score',
+                    data: top.map(s => s.health_score),
+                    backgroundColor: top.map(s => s.health_score >= 60 ? '#22C55E' : s.health_score >= 40 ? '#EAB308' : '#DC2626'),
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: { x: { beginAtZero: true, max: 100, title: { display: true, text: 'Health Score' } } },
+                plugins: { legend: { display: false } }
+            }
+        });
+    },
+
+    categoryStacked(canvasId, categories) {
+        this._destroy(canvasId);
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+        const statusKeys = new Set();
+        categories.forEach(c => Object.keys(c.status_distribution || {}).forEach(k => statusKeys.add(k)));
+        const statuses = [...statusKeys];
+        const datasets = statuses.map(s => ({
+            label: shortStatus(s),
+            data: categories.map(c => (c.status_distribution || {})[s] || 0),
+            backgroundColor: getStatusColor(s),
+        }));
+        this._instances[canvasId] = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: categories.map(c => c.category.length > 15 ? c.category.slice(0, 13) + '...' : c.category),
+                datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } },
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } }
+            }
+        });
+    },
+
+    poSummary(canvasId, summary) {
+        this._destroy(canvasId);
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+        const labels = ['Approved', 'To Review', 'Rejected'];
+        const keys = ['APPROVED', 'REVIEW', 'REJECTED'];
+        const colors = ['#22C55E', '#F59E0B', '#DC2626'];
+        const values = keys.map(k => summary[k] || 0);
+        this._instances[canvasId] = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 14, padding: 12, font: { size: 12 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => {
+                                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                const pct = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
+                                return ` ${ctx.label}: ${ctx.parsed} (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    },
+
+    orderingByStore(canvasId, storeSummary) {
+        this._destroy(canvasId);
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+        const top = storeSummary.slice(0, 15);
+        this._instances[canvasId] = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: top.map(s => s.location),
+                datasets: [{
+                    label: 'Order Value',
+                    data: top.map(s => s.total_order_value),
+                    backgroundColor: '#FF5900',
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: { legend: { display: false } },
+                scales: { x: { beginAtZero: true, ticks: { callback: v => formatCurrency(v) } } }
+            }
+        });
+    },
+
+    orderingUrgency(canvasId, urgencyCounts) {
+        this._destroy(canvasId);
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+        const labels = ['Urgent', 'Soon', 'Normal', 'Not Needed'];
+        const keys = ['URGENT', 'SOON', 'NORMAL', 'NOT NEEDED'];
+        const colors = ['#DC2626', '#F59E0B', '#3B82F6', '#9CA3AF'];
+        const values = keys.map(k => urgencyCounts[k] || 0);
+        this._instances[canvasId] = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 14, padding: 12, font: { size: 12 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => {
+                                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                const pct = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
+                                return ` ${ctx.label}: ${ctx.parsed} (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    },
+
+    locationBar(canvasId, locations) {
+        this._destroy(canvasId);
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+        this._instances[canvasId] = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: locations.map(l => l.location),
+                datasets: [{
+                    label: 'Stock Value',
+                    data: locations.map(l => l.stock_value),
+                    backgroundColor: '#FF5900',
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { callback: v => formatCurrency(v) } } }
+            }
+        });
+    }
+};
+
+// Contents of tables.js
+const Tables = {
+    _instances: {},
+
+    _destroy(id) {
+        if (this._instances[id]) {
+            this._instances[id].destroy();
+            delete this._instances[id];
+        }
+    },
+
+    skuTable(containerId, data) {
+        this._destroy(containerId);
+        const el = document.getElementById(containerId);
+        if (!el) return;
+        el.innerHTML = '';
+
+        const table = document.createElement('table');
+        table.id = containerId + '-tbl';
+        table.className = 'display compact stripe';
+        table.style.width = '100%';
+        el.appendChild(table);
+
+        this._instances[containerId] = $(table).DataTable({
+            data: data,
+            columns: [
+                { data: 'sku', title: 'SKU' },
+                { data: 'name', title: 'Name', render: (d, t, r) => {
+                    let badges = '';
+                    if (r.is_new_sku) badges += newSkuBadge(true);
+                    if (r.recently_purchased) badges += recentBadge(true);
+                    return `<span class="sku-name">${d || ''}</span> ${badges}`;
+                }},
+                { data: 'assessment', title: 'Status', render: d => statusBadge(d) },
+                { data: 'category', title: 'Category' },
+                { data: 'supplier', title: 'Supplier' },
+                { data: 'location', title: 'Location' },
+                { data: 'stock_qty', title: 'Stock', render: d => formatNumber(d), className: 'dt-right' },
+                { data: 'sales_qty', title: 'Sales', render: d => formatNumber(d), className: 'dt-right' },
+                { data: 'purchase_qty', title: 'Purchases', render: d => formatNumber(d), className: 'dt-right' },
+                { data: 'stock_value', title: 'Stock Value', render: d => formatCurrency(d), className: 'dt-right' },
+                { data: 'days_of_stock', title: 'Days of Stock', render: d => d >= 9999 ? '∞' : formatNumber(d), className: 'dt-right' },
+                { data: 'turnover_ratio', title: 'Turnover', render: d => d != null ? d.toFixed(2) : '0', className: 'dt-right' },
+            ],
+            order: [[2, 'asc']],
+            pageLength: 25,
+            dom: 'lBfrtip',
+            buttons: ['copy', 'csv'],
+            scrollX: true,
+            language: { search: '', searchPlaceholder: 'Search in table...' },
+            createdRow: (row, data) => {
+                if (data.is_new_sku) row.classList.add('row-new-sku');
+            }
+        });
+    },
+
+    supplierTable(containerId, data, onDrilldown) {
+        this._destroy(containerId);
+        const el = document.getElementById(containerId);
+        if (!el) return;
+        el.innerHTML = '';
+
+        const table = document.createElement('table');
+        table.id = containerId + '-tbl';
+        table.className = 'display compact stripe';
+        table.style.width = '100%';
+        el.appendChild(table);
+
+        this._instances[containerId] = $(table).DataTable({
+            data: data,
+            columns: [
+                { data: 'supplier', title: 'Supplier', render: (d) =>
+                    `<a href="#" class="drilldown-link" data-supplier="${d}">${d}</a>`
+                },
+                { data: 'total_skus', title: 'SKUs', className: 'dt-right' },
+                { data: 'healthy_pct', title: 'Healthy %', render: d => formatPct(d), className: 'dt-right' },
+                { data: 'at_risk_count', title: 'At Risk', className: 'dt-right' },
+                { data: 'dead_stock_value', title: 'Dead Stock Value', render: d => formatCurrency(d), className: 'dt-right' },
+                { data: 'stock_value', title: 'Total Stock Value', render: d => formatCurrency(d), className: 'dt-right' },
+                { data: 'avg_turnover', title: 'Avg Turnover', className: 'dt-right' },
+                { data: 'health_score', title: 'Health Score', render: (d) => {
+                    const color = d >= 60 ? '#22C55E' : d >= 40 ? '#EAB308' : '#DC2626';
+                    return `<span style="color:${color};font-weight:700">${d}</span>`;
+                }, className: 'dt-right' },
+            ],
+            order: [[7, 'desc']],
+            pageLength: 25,
+            dom: 'lfrtip',
+            scrollX: true,
+        });
+
+        $(table).on('click', '.drilldown-link', function(e) {
+            e.preventDefault();
+            if (onDrilldown) onDrilldown($(this).data('supplier'));
+        });
+    },
+
+    categoryTable(containerId, data, onDrilldown) {
+        this._destroy(containerId);
+        const el = document.getElementById(containerId);
+        if (!el) return;
+        el.innerHTML = '';
+
+        const table = document.createElement('table');
+        table.id = containerId + '-tbl';
+        table.className = 'display compact stripe';
+        table.style.width = '100%';
+        el.appendChild(table);
+
+        this._instances[containerId] = $(table).DataTable({
+            data: data,
+            columns: [
+                { data: 'category', title: 'Category', render: (d) =>
+                    `<a href="#" class="drilldown-link" data-category="${d}">${d}</a>`
+                },
+                { data: 'total_skus', title: 'SKUs', className: 'dt-right' },
+                { data: 'healthy_pct', title: 'Healthy %', render: d => formatPct(d), className: 'dt-right' },
+                { data: 'at_risk_count', title: 'At Risk', className: 'dt-right' },
+                { data: 'dead_stock_value', title: 'Dead Stock Value', render: d => formatCurrency(d), className: 'dt-right' },
+                { data: 'stock_value', title: 'Total Stock Value', render: d => formatCurrency(d), className: 'dt-right' },
+                { data: 'avg_turnover', title: 'Avg Turnover', className: 'dt-right' },
+            ],
+            order: [[2, 'desc']],
+            pageLength: 25,
+            dom: 'lfrtip',
+            scrollX: true,
+        });
+
+        $(table).on('click', '.drilldown-link', function(e) {
+            e.preventDefault();
+            if (onDrilldown) onDrilldown($(this).data('category'));
+        });
+    },
+
+    poTable(containerId, data) {
+        this._destroy(containerId);
+        const el = document.getElementById(containerId);
+        if (!el) return;
+        el.innerHTML = '';
+
+        const table = document.createElement('table');
+        table.id = containerId + '-tbl';
+        table.className = 'display compact stripe';
+        table.style.width = '100%';
+        el.appendChild(table);
+
+        this._instances[containerId] = $(table).DataTable({
+            data: data,
+            columns: [
+                { data: 'po_number', title: 'PO #' },
+                { data: 'sku', title: 'SKU' },
+                { data: 'product_name', title: 'Product' },
+                { data: 'recommendation', title: 'Decision', render: d => poBadge(d) },
+                { data: 'reason', title: 'Reason', render: d => `<span class="po-reason">${d}</span>` },
+                { data: 'po_qty', title: 'PO Qty', render: d => `<strong>${formatNumber(d)}</strong>`, className: 'dt-right' },
+                { data: 'suggested_qty', title: 'Suggested Qty', render: d => d > 0 ? formatNumber(d) : '-', className: 'dt-right' },
+                { data: 'po_covers_days', title: 'PO Covers (Days)', render: d => d >= 9999 ? '∞' : formatNumber(d), className: 'dt-right' },
+                { data: 'stock_qty', title: 'Stock On Hand', render: d => formatNumber(d), className: 'dt-right' },
+                { data: 'days_of_stock', title: 'Current Days of Stock', render: d => d >= 9999 ? '∞' : (d > 0 ? d.toFixed(0) : '0'), className: 'dt-right' },
+                { data: 'avg_daily_sales', title: 'Avg Daily Sales', render: d => d > 0 ? d.toFixed(1) : '0', className: 'dt-right' },
+                { data: 'sales_qty', title: 'Total Sales', render: d => formatNumber(d), className: 'dt-right' },
+                { data: 'assessment', title: 'Inventory Status', render: d => d ? statusBadge(d) : '<span style="color:#9CA3AF">New SKU</span>' },
+                { data: 'po_state', title: 'PO Status', render: d => {
+                    const s = (d || '').toLowerCase();
+                    const colors = { pending: '#F59E0B', received: '#22C55E', cancelled: '#DC2626' };
+                    const color = colors[s] || '#9CA3AF';
+                    return `<span style="color:${color};font-weight:600;text-transform:capitalize">${d || ''}</span>`;
+                }},
+                { data: 'po_supplier', title: 'PO Supplier' },
+                { data: 'store', title: 'Store' },
+                { data: 'unit_cost', title: 'Unit Cost', render: d => d > 0 ? formatCurrency(d) : '-', className: 'dt-right' },
+            ],
+            order: [[2, 'asc']],
+            pageLength: 50,
+            dom: 'lBfrtip',
+            buttons: ['copy', 'csv'],
+            scrollX: true,
+            language: { search: '', searchPlaceholder: 'Search PO lines...' },
+            createdRow: (row, data) => {
+                if (data.recommendation === 'REJECTED') row.style.background = 'rgba(220,38,38,0.07)';
+                else if (data.recommendation === 'REVIEW') row.style.background = 'rgba(245,158,11,0.06)';
+                else if (data.recommendation === 'APPROVED') row.style.background = 'rgba(34,197,94,0.05)';
+            }
+        });
+    },
+
+    orderingTable(containerId, data) {
+        this._destroy(containerId);
+        const el = document.getElementById(containerId);
+        if (!el) return;
+        el.innerHTML = '';
+
+        const table = document.createElement('table');
+        table.id = containerId + '-tbl';
+        table.className = 'display compact stripe';
+        table.style.width = '100%';
+        el.appendChild(table);
+
+        this._instances[containerId] = $(table).DataTable({
+            data: data,
+            columns: [
+                { data: 'sku', title: 'SKU' },
+                { data: 'name', title: 'Name' },
+                { data: 'location', title: 'Store' },
+                { data: 'stock_qty', title: 'Current SOH', render: d => formatNumber(d), className: 'dt-right' },
+                { data: 'avg_daily_sales', title: 'Avg Daily Sales', render: d => d > 0 ? d.toFixed(1) : '0', className: 'dt-right' },
+                { data: 'days_of_stock', title: 'Days of Stock', render: d => d >= 9999 ? '∞' : (d > 0 ? d.toFixed(0) : '0'), className: 'dt-right' },
+                { data: 'suggested_order_qty', title: 'Suggested Qty', render: d => `<strong>${formatNumber(d)}</strong>`, className: 'dt-right' },
+                { data: 'order_value', title: 'Order Value', render: d => formatCurrency(d), className: 'dt-right' },
+                { data: 'urgency', title: 'Urgency', render: d => urgencyBadge(d) },
+                { data: 'supplier', title: 'Supplier' },
+                { data: 'category', title: 'Category' },
+                { data: 'assessment', title: 'Inventory Status', render: d => d ? statusBadge(d) : '' },
+            ],
+            order: [[8, 'asc']],
+            pageLength: 50,
+            dom: 'lBfrtip',
+            buttons: ['copy', 'csv'],
+            scrollX: true,
+            language: { search: '', searchPlaceholder: 'Search orders...' },
+            createdRow: (row, data) => {
+                if (data.urgency === 'URGENT') row.style.background = 'rgba(220,38,38,0.07)';
+                else if (data.urgency === 'SOON') row.style.background = 'rgba(245,158,11,0.06)';
+            }
+        });
+    },
+
+    simpleTable(containerId, data, columns) {
+        this._destroy(containerId);
+        const el = document.getElementById(containerId);
+        if (!el) return;
+        el.innerHTML = '';
+
+        const table = document.createElement('table');
+        table.id = containerId + '-tbl';
+        table.className = 'display compact stripe';
+        table.style.width = '100%';
+        el.appendChild(table);
+
+        this._instances[containerId] = $(table).DataTable({
+            data: data,
+            columns: columns,
+            pageLength: 25,
+            dom: 'lfrtip',
+            scrollX: true,
+        });
+    }
+};
+
+// Contents of export.js
+const ExportManager = {
+    _on(id, handler) {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', handler);
+    },
+
+    init() {
+        this._on('btn-export-csv', async () => {
+            try {
+                const params = FilterState.getParams();
+                const data = await API.get('skus', params);
+                const rows = data.data || [];
+                if (rows.length === 0) { alert('No data to export'); return; }
+                this._downloadCSV(rows, 'stock_assessment.csv');
+            } catch (e) {
+                console.error('CSV export failed:', e);
+                alert('Export failed: ' + e.message);
+            }
+        });
+
+        this._on('btn-export-xlsx', async () => {
+            try {
+                const params = FilterState.getParams();
+                const data = await API.get('skus', params);
+                const rows = data.data || [];
+                if (rows.length === 0) { alert('No data to export'); return; }
+                this._downloadXLSX(rows, 'stock_assessment.xlsx', 'Stock Assessment');
+            } catch (e) {
+                console.error('Excel export failed:', e);
+                alert('Export failed: ' + e.message);
+            }
+        });
+
+        this._on('btn-export-ordering', async () => {
+            try {
+                const data = await API.get('ordering', FilterState.getParams());
+                const rows = data.data || [];
+                if (rows.length === 0) { alert('No data to export'); return; }
+                this._downloadXLSX(rows, 'Order_Recommendations.xlsx', 'Orders');
+            } catch (e) {
+                console.error('Ordering export failed:', e);
+                alert('Export failed: ' + e.message);
+            }
+        });
+
+        this._on('btn-export-po', async () => {
+            try {
+                const data = await API.get('po-assessment', {});
+                const rows = data.data || [];
+                if (rows.length === 0) { alert('No data to export'); return; }
+                this._downloadXLSX(rows, 'PO_Assessment.xlsx', 'PO Assessment');
+            } catch (e) {
+                console.error('PO export failed:', e);
+                alert('Export failed: ' + e.message);
+            }
+        });
+
+        this._on('btn-copy-po', () => {
+            const table = document.querySelector('#tbl-po-assessment table');
+            if (!table) return;
+            const rows = [];
+            table.querySelectorAll('tr').forEach(tr => {
+                const cells = [];
+                tr.querySelectorAll('th, td').forEach(td => cells.push(td.innerText.trim()));
+                rows.push(cells.join('\t'));
+            });
+            navigator.clipboard.writeText(rows.join('\n')).then(() => {
+                const btn = document.getElementById('btn-copy-po');
+                const orig = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => btn.textContent = orig, 2000);
+            });
+        });
+    },
+
+    _downloadCSV(data, filename) {
+        if (!data || data.length === 0) return;
+        const headers = Object.keys(data[0]);
+        const csvRows = [headers.join(',')];
+        data.forEach(row => {
+            const values = headers.map(h => {
+                let val = row[h] != null ? String(row[h]) : '';
+                // Escape double quotes and wrap in quotes if contains comma, quote, or newline
+                if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+                    val = '"' + val.replace(/"/g, '""') + '"';
+                }
+                return val;
+            });
+            csvRows.push(values.join(','));
+        });
+        const csvString = csvRows.join('\n');
+        const blob = new Blob(['﻿' + csvString], { type: 'text/csv;charset=utf-8;' });
+        this._downloadBlob(blob, filename);
+    },
+
+    _downloadXLSX(data, filename, sheetName) {
+        if (!data || data.length === 0) return;
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, sheetName || 'Sheet1');
+
+        // Auto-width columns
+        const headers = Object.keys(data[0]);
+        ws['!cols'] = headers.map(h => {
+            let maxLen = h.length;
+            data.forEach(row => {
+                const val = row[h] != null ? String(row[h]) : '';
+                if (val.length > maxLen) maxLen = val.length;
+            });
+            return { wch: Math.min(maxLen + 2, 40) };
+        });
+
+        XLSX.writeFile(wb, filename);
+    },
+
+    _downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+};
+
+// Contents of upload.js
+const UploadManager = {
+    authenticated: false,
+    username: '',
+    files: { soh: null, sales: null, po: null },
+    dataTypes: ['soh', 'sales', 'po'],
+    allTypes: ['soh', 'sales', 'po'],
+
+    async init() {
+        // Local mode: always authenticated, no server check needed
+        this.authenticated = true;
+        this.username = 'local';
+        this.files = { soh: null, sales: null, po: null };
+
+        this._bindEvents();
+        this._updateUI();
+    },
+
+    _bindEvents() {
+        const loginBtn = document.getElementById('btn-upload-login');
+        const logoutBtn = document.getElementById('btn-upload-logout');
+        const processBtn = document.getElementById('btn-process-data');
+        const passField = document.getElementById('upload-password');
+
+        if (loginBtn._bound) return;
+        loginBtn._bound = true;
+
+        loginBtn.addEventListener('click', () => this.login());
+        logoutBtn.addEventListener('click', () => this.logout());
+        processBtn.addEventListener('click', () => this.processFiles());
+        if (passField) {
+            passField.addEventListener('keydown', (e) => { if (e.key === 'Enter') this.login(); });
+        }
+
+        this.allTypes.forEach(type => {
+            const dropzone = document.getElementById('dropzone-' + type);
+            const fileInput = document.getElementById('file-' + type);
+
+            dropzone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropzone.classList.add('dragover');
+            });
+            dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+            dropzone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('dragover');
+                if (e.dataTransfer.files.length) this.uploadFile(type, e.dataTransfer.files[0]);
+            });
+            dropzone.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'LABEL' && e.target.tagName !== 'INPUT') fileInput.click();
+            });
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files.length) this.uploadFile(type, fileInput.files[0]);
+                fileInput.value = '';
+            });
+        });
+    },
+
+    async login() {
+        // Local mode: auto-succeed
+        this.authenticated = true;
+        this.username = 'local';
+        this.files = { soh: null, sales: null, po: null };
+        this._updateUI();
+    },
+
+    async logout() {
+        // Local mode: just reset UI state
+        this.authenticated = true;  // Stay authenticated in local mode
+        this.username = 'local';
+        this.files = { soh: null, sales: null, po: null };
+        this._updateUI();
+    },
+
+    async uploadFile(type, file) {
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!['xlsx', 'xls', 'csv'].includes(ext)) {
+            this._setCardError(type, 'File must be .xlsx, .xls, or .csv');
+            return;
+        }
+        if (file.size > 50 * 1024 * 1024) {
+            this._setCardError(type, 'File too large (max 50MB)');
+            return;
+        }
+
+        const card = document.getElementById('upload-card-' + type);
+        card.className = 'upload-card uploading';
+        this._setCardStatus(type, 'Parsing file...');
+
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            this._setCardStatus(type, 'Reading Excel...');
+            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+            const cols = jsonData.length > 0 ? Object.keys(jsonData[0]) : [];
+
+            this._setCardStatus(type, `Parsed ${jsonData.length} rows, ${cols.length} columns`);
+            this._log(`${type}: ${jsonData.length} rows, columns: ${cols.join(', ')}`);
+
+            const res = await API.post('upload', { type: type, data: jsonData });
+
+            const sizeKb = Math.round(file.size / 1024);
+            this.files[type] = { uploaded: true, filename: file.name, size_kb: sizeKb, rows: jsonData.length };
+            card.className = 'upload-card uploaded';
+            this._setCardStatus(type, `${file.name} (${sizeKb} KB, ${jsonData.length} rows, ${cols.length} cols)`, false);
+            this._updateProcessButton();
+        } catch (e) {
+            card.className = 'upload-card error';
+            this._setCardError(type, 'ERROR: ' + e.message);
+            this._log(`${type} ERROR: ${e.message}`);
+        }
+    },
+
+    _log(msg) {
+        const el = document.getElementById('debug-log');
+        if (el) el.textContent += msg + '\n';
+    },
+
+    async processFiles() {
+        const btn = document.getElementById('btn-process-data');
+        const statusEl = document.getElementById('process-status');
+        btn.disabled = true;
+        btn.textContent = 'Processing...';
+        statusEl.textContent = 'Consolidating data files...';
+        statusEl.className = 'upload-process-status processing';
+
+        try {
+            this._log('Processing started...');
+            const res = await API.post('process');
+            this._log('Process result: ' + JSON.stringify(res));
+            statusEl.textContent = res.message || 'Data processed successfully!';
+            statusEl.className = 'upload-process-status success';
+            btn.textContent = 'Done!';
+            this.files = { soh: null, sales: null, po: null };
+
+            setTimeout(() => {
+                this.allTypes.forEach(type => {
+                    document.getElementById('upload-card-' + type).className = 'upload-card';
+                    this._setCardStatus(type, '');
+                });
+                btn.textContent = 'Process & Update Dashboard';
+                this._updateProcessButton();
+                App.switchPage('overview');
+            }, 3000);
+        } catch (e) {
+            this._log('Process ERROR: ' + e.message);
+            statusEl.textContent = 'Error: ' + e.message;
+            statusEl.className = 'upload-process-status error';
+            btn.textContent = 'Process & Update Dashboard';
+            btn.disabled = false;
+        }
+    },
+
+    _updateUI() {
+        const loginEl = document.getElementById('upload-login');
+        const interfaceEl = document.getElementById('upload-interface');
+
+        // Local mode: always show upload interface, hide login
+        loginEl.style.display = 'none';
+        interfaceEl.style.display = 'block';
+        document.getElementById('upload-user-info').textContent = 'Local Mode';
+
+        this.allTypes.forEach(type => {
+            const card = document.getElementById('upload-card-' + type);
+            if (this.files[type]) {
+                card.className = 'upload-card uploaded';
+                const info = this.files[type];
+                const label = info.rows
+                    ? `${info.filename} (${info.size_kb} KB, ${info.rows} rows)`
+                    : `${info.filename} (${info.size_kb} KB)`;
+                this._setCardStatus(type, label, true);
+            } else {
+                card.className = 'upload-card';
+                this._setCardStatus(type, '');
+            }
+        });
+        this._updateProcessButton();
+    },
+
+    _updateProcessButton() {
+        const btn = document.getElementById('btn-process-data');
+        // Only require SOH and Sales (PO is optional)
+        const ready = this.dataTypes.every(t => this.files[t]);
+        btn.disabled = !ready;
+    },
+
+    _setCardStatus(type, text, showCheck) {
+        const el = document.getElementById('status-' + type);
+        if (text && showCheck) {
+            el.innerHTML = text;
+        } else {
+            el.textContent = text;
+        }
+        el.className = 'upload-file-status' + (text ? ' has-file' : '');
+    },
+
+    _setCardError(type, text) {
+        const el = document.getElementById('status-' + type);
+        el.textContent = text;
+        el.className = 'upload-file-status upload-error';
+    },
+};
+
+// Contents of app.js
+const App = {
+    currentPage: 'overview',
+
+    async init() {
+        await Engine.initDB();
+        await FilterState.init();
+        ExportManager.init();
+        FilterState.onChange(() => this.loadCurrentPage());
+
+        document.querySelectorAll('[data-page]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.switchPage(link.dataset.page);
+            });
+        });
+
+        document.getElementById('btn-reset-filters').addEventListener('click', () => FilterState.reset());
+
+        if (!Engine.hasData()) {
+            this.switchPage('data-upload');
+        } else {
+            this.switchPage('overview');
+        }
+    },
+
+    switchPage(page) {
+        this.currentPage = page;
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('[data-page]').forEach(l => l.classList.remove('active'));
+        const pageEl = document.getElementById('page-' + page);
+        if (pageEl) pageEl.classList.add('active');
+        const linkEl = document.querySelector(`[data-page="${page}"]`);
+        if (linkEl) linkEl.classList.add('active');
+        this.loadCurrentPage();
+    },
+
+    async loadCurrentPage() {
+        const loaders = {
+            'overview': () => this.loadOverview(),
+            'sku-detail': () => this.loadSkuDetail(),
+            'suppliers': () => this.loadSuppliers(),
+            'categories': () => this.loadCategories(),
+            'new-purchases': () => this.loadNewPurchases(),
+            'locations': () => this.loadLocations(),
+            'po-assessment': () => this.loadPoAssessment(),
+            'ordering': () => this.loadOrdering(),
+            'data-upload': () => this.loadUpload(),
+        };
+        const loader = loaders[this.currentPage];
+        if (loader) {
+            this._showLoading();
+            try { await loader(); }
+            catch (e) { console.error('Load error:', e); this._showError(e.message); }
+            finally { this._hideLoading(); }
+        }
+    },
+
+    async loadOverview() {
+        if (!Engine.hasData()) {
+            this._showNoDataMessage('page-overview');
+            return;
+        }
+
+        const data = await API.get('overview', FilterState.getParams());
+
+        document.getElementById('kpi-total-skus').textContent = formatNumber(data.total_skus);
+        document.getElementById('kpi-total-inventory').textContent = formatCurrency(data.total_stock_value);
+        document.getElementById('kpi-dead-stock').textContent = formatCurrency(data.dead_stock_value);
+        document.getElementById('kpi-healthy-pct').textContent = formatPct(data.healthy_pct);
+        document.getElementById('kpi-at-risk').textContent = formatNumber(data.at_risk_count);
+        document.getElementById('kpi-stockout').textContent = formatNumber(data.stockout_count);
+        document.getElementById('kpi-low-stock').textContent = formatNumber(data.low_stock_count);
+
+        Charts.statusDistribution('chart-status-dist', data.status_distribution || {});
+
+        if (data.top_worst && data.top_worst.length > 0) {
+            Tables.simpleTable('tbl-top-worst', data.top_worst, [
+                { data: 'sku', title: 'SKU' },
+                { data: 'name', title: 'Name' },
+                { data: 'assessment', title: 'Status', render: d => statusBadge(d) },
+                { data: 'stock_value', title: 'Stock Value', render: d => formatCurrency(d), className: 'dt-right' },
+                { data: 'supplier', title: 'Supplier' },
+            ]);
+        }
+
+        Tables.simpleTable('tbl-status-summary', data.status_summary || [], [
+            { data: 'status', title: 'Status', render: d => statusBadge(d) },
+            { data: 'sku_count', title: 'SKU Count', render: d => formatNumber(d), className: 'dt-right' },
+            { data: 'stock_qty', title: 'Stock Qty', render: d => formatNumber(d), className: 'dt-right' },
+            { data: 'stock_value', title: 'Stock Value', render: d => formatCurrency(d), className: 'dt-right' },
+            { data: 'pct_of_total', title: '% of Total', render: d => d + '%', className: 'dt-right' },
+        ]);
+
+        // Show data info
+        const filesInfo = Engine.getFilesInfo();
+        if (filesInfo.data_files && filesInfo.data_files.length > 0) {
+            const f = filesInfo.data_files[0];
+            const ts = f.last_modified && f.last_modified !== 'unknown'
+                ? new Date(f.last_modified).toLocaleDateString()
+                : '';
+            document.getElementById('file-info').textContent = `${f.rows} SKUs loaded` + (ts ? ` (${ts})` : '');
+        } else {
+            document.getElementById('file-info').textContent = 'No data loaded';
+        }
+    },
+
+    async loadSkuDetail() {
+        if (!Engine.hasData()) { this._showNoDataMessage('page-sku-detail'); return; }
+        const data = await API.get('skus', FilterState.getParams());
+        Tables.skuTable('tbl-sku-detail', data.data || []);
+        document.getElementById('sku-count-info').textContent = `${formatNumber(data.total)} SKUs`;
+    },
+
+    async loadSuppliers() {
+        if (!Engine.hasData()) { this._showNoDataMessage('page-suppliers'); return; }
+        const data = await API.get('suppliers', FilterState.getParams());
+        Charts.supplierHealth('chart-supplier-health', data);
+        Tables.supplierTable('tbl-suppliers', data, async (supplier) => {
+            FilterState.supplier = supplier;
+            document.getElementById('filter-supplier').value = supplier;
+            this.switchPage('sku-detail');
+        });
+    },
+
+    async loadCategories() {
+        if (!Engine.hasData()) { this._showNoDataMessage('page-categories'); return; }
+        const data = await API.get('categories', FilterState.getParams());
+        Charts.categoryStacked('chart-category-stacked', data);
+        Tables.categoryTable('tbl-categories', data, async (category) => {
+            FilterState.category = category;
+            document.getElementById('filter-category').value = category;
+            this.switchPage('sku-detail');
+        });
+    },
+
+    async loadNewPurchases() {
+        if (!Engine.hasData()) { this._showNoDataMessage('page-new-purchases'); return; }
+        const data = await API.get('new-purchases', FilterState.getParams());
+
+        document.getElementById('new-sku-count').textContent = data.new_count || 0;
+        document.getElementById('recent-purchase-count').textContent = data.recent_count || 0;
+
+        const baseCols = [
+            { data: 'sku', title: 'SKU' },
+            { data: 'name', title: 'Name' },
+            { data: 'assessment', title: 'Status', render: d => statusBadge(d) },
+            { data: 'category', title: 'Category' },
+            { data: 'supplier', title: 'Supplier' },
+            { data: 'location', title: 'Location' },
+            { data: 'stock_qty', title: 'Stock', render: d => formatNumber(d), className: 'dt-right' },
+            { data: 'purchase_qty', title: 'Purchases', render: d => formatNumber(d), className: 'dt-right' },
+            { data: 'stock_value', title: 'Stock Value', render: d => formatCurrency(d), className: 'dt-right' },
+        ];
+
+        Tables.simpleTable('tbl-new-skus', data.new_skus || [], baseCols);
+        Tables.simpleTable('tbl-recent-purchases', data.recently_purchased || [], baseCols);
+    },
+
+    async loadLocations() {
+        if (!Engine.hasData()) { this._showNoDataMessage('page-locations'); return; }
+        const data = await API.get('locations', FilterState.getParams());
+        Charts.locationBar('chart-location-bar', data);
+        Tables.simpleTable('tbl-locations', data, [
+            { data: 'location', title: 'Location' },
+            { data: 'total_skus', title: 'SKUs', className: 'dt-right' },
+            { data: 'stock_value', title: 'Stock Value', render: d => formatCurrency(d), className: 'dt-right' },
+        ]);
+    },
+
+    _poAllData: [],
+    _poActiveStatus: null,
+
+    async loadPoAssessment() {
+        if (!Engine.hasData()) { this._showNoDataMessage('page-po-assessment'); return; }
+        const data = await API.get('po-assessment', FilterState.getParams());
+
+        if (data.error) {
+            document.getElementById('tbl-po-assessment').innerHTML =
+                '<div class="empty-state"><h3>PO File Not Found</h3><p>Upload a PO file on the Upload Data page.</p></div>';
+            return;
+        }
+
+        this._poAllData = data.data || [];
+        this._poActiveStatus = null;
+
+        const s = data.summary || {};
+        document.getElementById('po-approved-count').textContent = s.APPROVED || 0;
+        document.getElementById('po-review-count').textContent = s.REVIEW || 0;
+        document.getElementById('po-rejected-count').textContent = s.REJECTED || 0;
+        document.getElementById('po-file-date').textContent = data.file_date ? `PO File updated: ${data.file_date}` : '';
+        document.getElementById('po-total-badge').textContent = `${data.total || 0} SKUs`;
+
+        Charts.poSummary('chart-po-summary', s);
+
+        this._buildPoStatusSlicer();
+        Tables.poTable('tbl-po-assessment', this._poAllData);
+    },
+
+    _buildPoStatusSlicer() {
+        const container = document.getElementById('po-status-chips');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const counts = {};
+        this._poAllData.forEach(r => {
+            const st = (r.po_state || '').toLowerCase() || 'unknown';
+            counts[st] = (counts[st] || 0) + 1;
+        });
+
+        const allChip = document.createElement('span');
+        allChip.className = 'po-slicer-chip active';
+        allChip.dataset.status = '';
+        allChip.innerHTML = `All<span class="chip-count">(${this._poAllData.length})</span>`;
+        container.appendChild(allChip);
+
+        Object.keys(counts).sort().forEach(st => {
+            const chip = document.createElement('span');
+            chip.className = 'po-slicer-chip';
+            chip.dataset.status = st;
+            chip.innerHTML = `${st.charAt(0).toUpperCase() + st.slice(1)}<span class="chip-count">(${counts[st]})</span>`;
+            container.appendChild(chip);
+        });
+
+        container.addEventListener('click', e => {
+            const chip = e.target.closest('.po-slicer-chip');
+            if (!chip) return;
+            container.querySelectorAll('.po-slicer-chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            this._poActiveStatus = chip.dataset.status || null;
+            this._applyPoStatusFilter();
+        });
+    },
+
+    _applyPoStatusFilter() {
+        let filtered = this._poAllData;
+        if (this._poActiveStatus) {
+            filtered = this._poAllData.filter(r =>
+                (r.po_state || '').toLowerCase() === this._poActiveStatus
+            );
+        }
+        document.getElementById('po-total-badge').textContent = `${filtered.length} SKUs`;
+        Tables.poTable('tbl-po-assessment', filtered);
+    },
+
+    async loadOrdering() {
+        if (!Engine.hasData()) { this._showNoDataMessage('page-ordering'); return; }
+        const data = await API.get('ordering', FilterState.getParams());
+
+        const s = data.summary || {};
+        document.getElementById('ord-total-skus').textContent = formatNumber(s.total_skus_to_order || 0);
+        document.getElementById('ord-total-value').textContent = formatCurrency(s.total_order_value || 0);
+        document.getElementById('ord-urgent-count').textContent = formatNumber((s.urgency_counts || {}).URGENT || 0);
+        document.getElementById('ord-stores-count').textContent = formatNumber(s.stores_needing_orders || 0);
+        document.getElementById('ord-total-badge').textContent = `${data.total || 0} SKUs`;
+
+        Charts.orderingByStore('chart-ordering-store', data.store_summary || []);
+        Charts.orderingUrgency('chart-ordering-urgency', s.urgency_counts || {});
+        Tables.orderingTable('tbl-ordering', data.data || []);
+    },
+
+    async loadUpload() {
+        await UploadManager.init();
+    },
+
+    _showNoDataMessage(pageId) {
+        // For pages that need data, show a friendly message
+        const pageEl = document.getElementById(pageId);
+        if (!pageEl) return;
+        const contentArea = pageEl.querySelector('.card, .kpi-grid, .page-header');
+        if (contentArea) {
+            // Insert message before the first element if not already present
+            if (!pageEl.querySelector('.no-data-banner')) {
+                const banner = document.createElement('div');
+                banner.className = 'no-data-banner';
+                banner.style.cssText = 'background:#FFF3E0;border:1px solid #FF5900;border-radius:8px;padding:24px;text-align:center;margin:20px 0;';
+                banner.innerHTML = '<h3 style="margin:0 0 8px;color:#411517;">No Data Loaded</h3>' +
+                    '<p style="margin:0;color:#666;">Upload your SOH and Sales files to get started.</p>' +
+                    '<button onclick="App.switchPage(\'data-upload\')" style="margin-top:12px;padding:8px 24px;background:#FF5900;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">Go to Upload Page</button>';
+                pageEl.insertBefore(banner, pageEl.firstChild);
+            }
+        }
+    },
+
+    _showLoading() {
+        const el = document.getElementById('loading-overlay');
+        if (el) el.classList.add('active');
+    },
+    _hideLoading() {
+        const el = document.getElementById('loading-overlay');
+        if (el) el.classList.remove('active');
+    },
+    _showError(msg) {
+        console.error('Dashboard error:', msg);
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => App.init());
+    </script>
+</body>
+</html>

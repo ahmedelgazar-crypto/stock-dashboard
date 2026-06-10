@@ -2,6 +2,7 @@ const App = {
     currentPage: 'overview',
 
     async init() {
+        if (!this._checkAccess()) return;
         await Engine.initDB();
         await FilterState.init();
         ExportManager.init();
@@ -291,6 +292,44 @@ const App = {
     },
     _showError(msg) {
         console.error('Dashboard error:', msg);
+    },
+
+    _checkAccess() {
+        const KEY = 'stock_dash_auth';
+        const PASS = 'tmart2026';
+        if (sessionStorage.getItem(KEY) === 'true') return true;
+
+        document.body.innerHTML = '';
+        const gate = document.createElement('div');
+        gate.style.cssText = 'position:fixed;inset:0;background:#F4EDE3;display:flex;align-items:center;justify-content:center;z-index:9999;font-family:Segoe UI,system-ui,sans-serif';
+        gate.innerHTML = `
+            <div style="background:#fff;padding:40px;border-radius:12px;box-shadow:0 4px 24px rgba(65,21,23,0.15);text-align:center;max-width:380px;width:100%">
+                <div style="font-size:20px;font-weight:700;color:#411517;margin-bottom:4px">Stock Efficiency Dashboard</div>
+                <div style="font-size:13px;color:#6B5B5E;margin-bottom:24px">Talabat internal access only</div>
+                <input type="password" id="gate-pass" placeholder="Enter access code" style="width:100%;padding:12px;border:1px solid #E5D9CF;border-radius:8px;font-size:14px;margin-bottom:12px;box-sizing:border-box">
+                <div id="gate-error" style="color:#DC2626;font-size:13px;margin-bottom:12px;min-height:20px"></div>
+                <button id="gate-btn" style="width:100%;padding:12px;background:#FF5900;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">Access Dashboard</button>
+            </div>`;
+        document.body.appendChild(gate);
+
+        const input = document.getElementById('gate-pass');
+        const btn = document.getElementById('gate-btn');
+        const err = document.getElementById('gate-error');
+
+        const tryLogin = () => {
+            if (input.value === PASS) {
+                sessionStorage.setItem(KEY, 'true');
+                location.reload();
+            } else {
+                err.textContent = 'Invalid access code';
+                input.value = '';
+                input.focus();
+            }
+        };
+        btn.addEventListener('click', tryLogin);
+        input.addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
+        input.focus();
+        return false;
     }
 };
 
