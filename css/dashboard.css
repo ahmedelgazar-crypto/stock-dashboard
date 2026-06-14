@@ -191,6 +191,13 @@
     color: var(--text-primary);
 }
 
+.po-summary-subvalue {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
 .po-summary-label {
     font-size: 12px;
     font-weight: 700;

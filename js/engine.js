@@ -835,7 +835,7 @@ const Engine = (() => {
         }
 
         var results = [];
-        var summary = { APPROVED: 0, REVIEW: 0, REJECTED: 0 };
+        var summary = { APPROVED: 0, REVIEW: 0, REJECTED: 0, APPROVED_VALUE: 0, REVIEW_VALUE: 0, REJECTED_VALUE: 0 };
 
         for (var j = 0; j < poData.length; j++) {
             var po = poData[j];
@@ -867,9 +867,16 @@ const Engine = (() => {
             var recommendation;
             var reason;
 
+            var isNewSku = hasInv && (invItem.is_new_sku === true || invItem.is_new_sku === 'true' || invItem.recently_purchased === true || invItem.recently_purchased === 'true');
+
             if (!hasInv) {
                 recommendation = 'REVIEW';
                 reason = 'New SKU — not in inventory. PO requests ' + formatInt(poQty) + ' units. Verify demand before proceeding.';
+            } else if (!hasDemand && isNewSku) {
+                recommendation = 'REVIEW';
+                reason = 'New/recently purchased SKU with no sales history yet. Holding ' + formatInt(Math.round(stockQty)) +
+                    ' units (value ' + formatNum(stockValue) + '). PO of ' +
+                    formatInt(poQty) + ' units — review demand potential before approving.';
             } else if (!hasDemand) {
                 recommendation = 'REJECTED';
                 reason = 'No sales history. Holding ' + formatInt(Math.round(stockQty)) +
@@ -898,6 +905,8 @@ const Engine = (() => {
             }
 
             summary[recommendation] = (summary[recommendation] || 0) + 1;
+            var poLineValue = poQty * (po.unit_cost || 0);
+            summary[recommendation + '_VALUE'] = (summary[recommendation + '_VALUE'] || 0) + poLineValue;
 
             results.push({
                 sku: sku,
