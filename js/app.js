@@ -306,7 +306,8 @@ const App = {
             'cristel.mejia@talabat.com',
             'mostafa.zeyada@talabat.com',
             'muhammed.tharuvana@talabat.com',
-            'sherif.magdy@talabat.com'
+            'sherif.magdy@talabat.com',
+            'islam.ebada@talabat.com'
         ];
         const saved = sessionStorage.getItem(KEY);
         if (saved && ALLOWED.includes(saved)) return true;
